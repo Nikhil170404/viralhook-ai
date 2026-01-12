@@ -16,6 +16,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default function LibraryPage() {
     const [copiedId, setCopiedId] = useState<number | null>(null);
+    const [shareCopiedId, setShareCopiedId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [dbPrompts, setDbPrompts] = useState<PromptTemplate[]>([]);
     const [sortBy, setSortBy] = useState<'newest' | 'popular'>('popular');
@@ -283,13 +284,21 @@ export default function LibraryPage() {
                                 <span className="text-[10px] text-gray-600 flex items-center justify-center px-1">
                                     {prompt.isCommunity ? <Globe className="w-3 h-3 text-gray-500" /> : <Check className="w-3 h-3 text-blue-500" />}
                                 </span>
-                                <Link
-                                    href={`/p/${prompt.id}`}
-                                    className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-gray-400 hover:text-white"
-                                    title="View Share Link"
+                                <button
+                                    onClick={() => {
+                                        const url = `${window.location.origin}/p/${prompt.id}`;
+                                        navigator.clipboard.writeText(url);
+                                        setShareCopiedId(prompt.id);
+                                        setTimeout(() => setShareCopiedId(null), 2000);
+                                    }}
+                                    className={`p-2 rounded-lg transition-colors ${shareCopiedId === prompt.id
+                                            ? 'bg-green-500/20 text-green-400'
+                                            : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+                                        }`}
+                                    title="Copy Link to Clipboard"
                                 >
-                                    <Share2 className="w-3 h-3" />
-                                </Link>
+                                    {shareCopiedId === prompt.id ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
+                                </button>
                             </div>
                         </motion.div>
                     ))}

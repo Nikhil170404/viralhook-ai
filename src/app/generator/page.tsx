@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Copy, RefreshCw, LogOut, Share2 } from "lucide-react";
+import { Copy, RefreshCw, LogOut, Share2, Check } from "lucide-react";
 import { viralPrompts } from "@/lib/prompts";
 import { AIInputWithLoading } from "@/components/ui/ai-input-with-loading";
 import { Navbar } from "@/components/ui/navbar";
@@ -19,6 +19,7 @@ export default function Home() {
   const [selectedPrompt, setSelectedPrompt] = useState<any>(null); // Keeping any for now to avoid strict type mismatch with API response if fields differ
   const [generatedResult, setGeneratedResult] = useState("");
   const [isCopied, setIsCopied] = useState(false);
+  const [isShareCopied, setIsShareCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // Check Auth Status & Protect Route
@@ -196,13 +197,21 @@ export default function Home() {
                     <div className="flex gap-3">
                       {/* Share Button (Only if we have a real ID) */}
                       {selectedPrompt?.id && selectedPrompt.id !== 0 && (
-                        <Link
-                          href={`/p/${selectedPrompt.id}`}
-                          target="_blank"
-                          className="px-5 py-2.5 rounded-xl font-bold text-sm bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-2"
+                        <button
+                          onClick={() => {
+                            const url = `${window.location.origin}/p/${selectedPrompt.id}`;
+                            navigator.clipboard.writeText(url);
+                            setIsShareCopied(true);
+                            setTimeout(() => setIsShareCopied(false), 2000);
+                          }}
+                          className={`px-5 py-2.5 rounded-xl font-bold text-sm border transition-all flex items-center gap-2 ${isShareCopied
+                              ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                              : 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20'
+                            }`}
                         >
-                          <Share2 className="w-4 h-4" /> Share
-                        </Link>
+                          {isShareCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                          {isShareCopied ? "Link Copied" : "Share Link"}
+                        </button>
                       )}
 
                       <button
