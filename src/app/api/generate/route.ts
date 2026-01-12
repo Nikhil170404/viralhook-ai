@@ -201,7 +201,7 @@ export async function POST(req: Request) {
 
         if (!existing) {
             // 6. SERVER-SIDE SAVE (using dbClient)
-            const { error } = await dbClient.from('generated_prompts').insert({
+            const { data: insertedData, error } = await dbClient.from('generated_prompts').insert({
                 user_id: user.id,
                 prompt_text: aiContent.prompt,
                 viral_hook: aiContent.hook,
@@ -209,7 +209,12 @@ export async function POST(req: Request) {
                 platform: randomStyle.platform,
                 mechanism: randomStyle.mechanism,
                 mode: mode
-            });
+            }).select('id').single();
+
+            if (insertedData) {
+                // @ts-ignore
+                existing = { id: insertedData.id };
+            }
             saveError = error;
         }
 
@@ -222,6 +227,7 @@ export async function POST(req: Request) {
 
         // 8. Return result
         return NextResponse.json({
+            id: existing?.id,
             prompt: aiContent.prompt,
             category: randomStyle.category, // Assuming data.category is not available here, using randomStyle
             platform: randomStyle.platform, // Assuming data.platform is not available here, using randomStyle

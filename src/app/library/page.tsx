@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { PromptTemplate } from "@/lib/prompts";
-import { Copy, Check, Search, TrendingUp, Clock, Globe, ChevronDown } from "lucide-react";
+import { Copy, Check, Search, TrendingUp, Clock, Globe, ChevronDown, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -283,6 +283,13 @@ export default function LibraryPage() {
                                 <span className="text-[10px] text-gray-600 flex items-center justify-center px-1">
                                     {prompt.isCommunity ? <Globe className="w-3 h-3 text-gray-500" /> : <Check className="w-3 h-3 text-blue-500" />}
                                 </span>
+                                <Link
+                                    href={`/p/${prompt.id}`}
+                                    className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-gray-400 hover:text-white"
+                                    title="View Share Link"
+                                >
+                                    <Share2 className="w-3 h-3" />
+                                </Link>
                             </div>
                         </motion.div>
                     ))}

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Copy, RefreshCw, LogOut } from "lucide-react";
+import { Copy, RefreshCw, LogOut, Share2 } from "lucide-react";
 import { viralPrompts } from "@/lib/prompts";
 import { AIInputWithLoading } from "@/components/ui/ai-input-with-loading";
 import { Navbar } from "@/components/ui/navbar";
@@ -107,7 +107,7 @@ export default function Home() {
                   const data = await response.json();
 
                   setSelectedPrompt({
-                    id: 0,
+                    id: data.id || 0,
                     category: data.category || "Viral Hit",
                     template: data.prompt,
                     platform: data.platform || "AI Video",
@@ -193,25 +193,38 @@ export default function Home() {
                     <span className="text-xs text-gray-500 font-mono">
                       Optimized for {selectedPrompt?.platform || 'All Platforms'}
                     </span>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedResult);
-                        setIsCopied(true);
-                        setTimeout(() => setIsCopied(false), 2000);
-                      }}
-                      className={`
-                        px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 flex items-center gap-2
-                        ${isCopied
-                          ? 'bg-green-500 text-white shadow-lg shadow-green-500/20 scale-105'
-                          : 'bg-white text-black hover:bg-gray-100 hover:scale-105 shadow-lg shadow-white/10'}
-                      `}
-                    >
-                      {isCopied ? (
-                        <>✓ Copied!</>
-                      ) : (
-                        <><Copy className="w-4 h-4" /> Copy Prompt</>
+                    <div className="flex gap-3">
+                      {/* Share Button (Only if we have a real ID) */}
+                      {selectedPrompt?.id && selectedPrompt.id !== 0 && (
+                        <Link
+                          href={`/p/${selectedPrompt.id}`}
+                          target="_blank"
+                          className="px-5 py-2.5 rounded-xl font-bold text-sm bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-2"
+                        >
+                          <Share2 className="w-4 h-4" /> Share
+                        </Link>
                       )}
-                    </button>
+
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedResult);
+                          setIsCopied(true);
+                          setTimeout(() => setIsCopied(false), 2000);
+                        }}
+                        className={`
+                            px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 flex items-center gap-2
+                            ${isCopied
+                            ? 'bg-green-500 text-white shadow-lg shadow-green-500/20 scale-105'
+                            : 'bg-white text-black hover:bg-gray-100 hover:scale-105 shadow-lg shadow-white/10'}
+                        `}
+                      >
+                        {isCopied ? (
+                          <>✓ Copied!</>
+                        ) : (
+                          <><Copy className="w-4 h-4" /> Copy Prompt</>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
