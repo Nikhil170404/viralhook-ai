@@ -1,4 +1,14 @@
-import { getNegativePrompt } from '../helpers';
+import {
+    getNegativePrompt,
+    getKlingInstructions,
+    getRunwayInstructions,
+    getVeoInstructions,
+    getPhysicsKeywords,
+    applyVHSEffect
+} from '../helpers';
+
+// Helper for glitch keywords (not in main helpers yet)
+const getGlitchKeywords = () => "datamoshing, compression artifact, rgb split, pixel sorting, jpeg artifact";
 
 /**
  * CHAOS MODE - Maximum Virality, Glitch, and Physics Breaking
@@ -6,23 +16,30 @@ import { getNegativePrompt } from '../helpers';
  */
 export function getChaosPrompt(object: string, targetModel?: string) {
 
+    // Select Platform Instructions
+    let platformInstructions = "";
+    if (targetModel?.toLowerCase().includes("kling")) platformInstructions = getKlingInstructions();
+    else if (targetModel?.toLowerCase().includes("runway")) platformInstructions = getRunwayInstructions();
+    else if (targetModel?.toLowerCase().includes("veo")) platformInstructions = getVeoInstructions();
+    else platformInstructions = getKlingInstructions() + "\n" + getRunwayInstructions(); // Best of both if auto
+
     // ✅ 2026 LATEST CHAOS TRENDS
     const chaosScenarios = [
         {
             category: "Physics Break",
-            chaosAction: "Object turns into liquid then evaporates into geometric shapes",
-            visualStyle: "Datamoshing, glitch texture, RGB split",
+            chaosAction: `The ${object} suddenly turns into liquid mercury, splashes upward against gravity, then evaporates into floating geometric pyramids.`,
+            visualStyle: "Datamoshing, glitch texture, RGB split, liquid simulation",
             viralHook: "My brain.exe stopped working 🧠",
             platform: "Kling (High motion)",
             difficulty: "Hard",
             estimatedTime: "10 mins (Kling) + 10 mins post",
             postProcessing: "Add glitch sound effects. Maximize saturation.",
-            commonIssues: "Video might look like noise - keep subject recognizing for first 2 seconds."
+            commonIssues: "Video might look like noise - keep subject recognizable for first 2 seconds."
         },
         {
             category: "Mumbai Traffic Chaos",
-            chaosAction: "Rickshaws flying in zero gravity, cows walking on walls",
-            visualStyle: "Surrealism, saturated colors, chaotic motion",
+            chaosAction: `The ${object} is stuck in a Mumbai traffic jam where rickshaws are flying in zero gravity and cows are walking vertically on walls.`,
+            visualStyle: "Surrealism, saturated colors, chaotic motion, fisheye lens",
             viralHook: "Average day in Mumbai 🇮🇳",
             platform: "Runway Gen-4",
             difficulty: "Medium",
@@ -32,8 +49,8 @@ export function getChaosPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Scale Manipulation",
-            chaosAction: "Tiny person eats a giant burger, then burger eats person",
-            visualStyle: "Fisheye lens, forced perspective",
+            chaosAction: `A tiny version of the ${object} is targeted by a giant hand, but then the ${object} suddenly grows 100x size and consumes the hand.`,
+            visualStyle: "Fisheye lens, forced perspective, macro photography",
             viralHook: "Uno Reverse Card 🔄",
             platform: "Veo 3",
             difficulty: "Hard",
@@ -43,8 +60,8 @@ export function getChaosPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Digital Meltdown",
-            chaosAction: "World dissolves into binary code, matrix rain, error popups",
-            visualStyle: "Cyberpunk, glitch art, VHS static",
+            chaosAction: `The ${object} starts pixelating, then the entire world behind it dissolves into green binary code matrix rain and Windows XP error popups.`,
+            visualStyle: "Cyberpunk, glitch art, VHS static, CRT monitor effect",
             viralHook: "Simulation Glitch 👾",
             platform: "Kling AI",
             difficulty: "Medium",
@@ -57,26 +74,48 @@ export function getChaosPrompt(object: string, targetModel?: string) {
     const randomChaos = chaosScenarios[Math.floor(Math.random() * chaosScenarios.length)];
     const negPrompt = getNegativePrompt(targetModel || 'auto');
 
+    // Add VHS effect if specific style
+    const vhsInstructions = randomChaos.visualStyle.includes("VHS") ? applyVHSEffect() : "";
+
     const systemPrompt = `You are a CHAOS AGENT for Viral Video AI.
 
-**OBJECT**: "${object}"
+**OBJECT INPUT**: "${object}"
+**SELECTED STYLE**: ${randomChaos.category}
 
-**CHAOS STYLE**: ${randomChaos.category}
-**ACTION**: ${randomChaos.chaosAction}
+**PLATFORM INSTRUCTIONS**:
+${platformInstructions}
 
-**RULES**:
-1. Break physics completely
-2. Maximize visual confusion and surprise
-3. Duration: 5 seconds
-4. NO logic, pure content
+**PHYSICS/GLITCH VOCABULARY**:
+${getPhysicsKeywords()}
+(Use 'Physics Breakdown' and 'Glitch' categories specifically)
+
+**GLITCH KEYWORDS**:
+${getGlitchKeywords()}
+
+${vhsInstructions ? `**VHS EFFECTS**:\n${vhsInstructions}` : ''}
+
+**TASK**:
+Generate a specific viral video prompt where the "${object}" is the central element.
+Integrate the object naturally into the following action:
+"${randomChaos.chaosAction}"
+
+**VISUAL STYLE**:
+${randomChaos.visualStyle}
+
+**STRICT RULES**:
+1. Break physics completely.
+2. Maximize visual confusion and surprise.
+3. Duration: 5 seconds.
+4. NO logic, pure content.
+5. Use the provided Physics/Glitch vocabulary to enhance the prompt.
 
 ${negPrompt ? `Avoid: ${negPrompt}` : ''}
 
-**OUTPUT (JSON only)**:
+**OUTPUT (JSON)**:
 {
-  "prompt": "[Detailed chaotic prompt instructions]",
+  "prompt": "[Detailed chaotic prompt instructions integrating the object]",
   "hook": "${randomChaos.viralHook}",
-  "photoInstructions": "Upload photo -> Set Chaos Level to MAX (10) -> Use 'Glitch' preset",
+  "photoInstructions": "Upload photo of ${object} -> Set Chaos Level to MAX (10) -> Use '${randomChaos.visualStyle}' preset",
   "expectedViews": "5-50M views (High variance)",
   "difficulty": "${randomChaos.difficulty}",
   "estimatedTime": "${randomChaos.estimatedTime}",
