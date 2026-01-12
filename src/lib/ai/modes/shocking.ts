@@ -261,6 +261,20 @@ ${randomScenario.timing}
 **Step 5 - Physics Details** (for realism):
 ${randomScenario.physicsDetails}
 
+**FEW-SHOT EXAMPLES (LEARN FROM THESE)**:
+
+✅ **GOOD OUTPUT (Precise Timing + Details)**:
+{
+  "prompt": "A delivery drone (Subject) hovering at front door. Camera: CCTV high angle. Action: Drone battery explodes. Timing: 0-2s hover, 2s spark, 3s EXPLOSION fireball, 4s debris hits lens. Physics: 'Thermal bloom', 'Shockwave', 'Plastic fragmentation'. Duration: 5s. Platform: Kling Motion Brush on explosion. Audio: Rotor hum -> Pop -> Boom.",
+  "hook": "No tip today 💀"
+}
+
+❌ **BAD OUTPUT (Generic)**:
+{
+  "prompt": "The drone explodes loudly.",
+  "hook": "Scary"
+}
+
 **STRICT RULES**:
 1. Start with the subject: "${object}"
 2. Build tension for 2 seconds (calm scene)

@@ -130,24 +130,24 @@ Static, Push In, Pull Out, Pan Left, Pan Right, Tilt Up, Tilt Down, Orbit Left, 
 
 export const getNegativePrompt = (model: string) => {
     const m = model.toLowerCase();
-    
+
     // Runway HATES negative prompts - causes opposite effects
     if (m.includes('runway')) return '';
-    
+
     const baseNegative = "distorted faces, morphing, unrealistic physics, floating objects, warping, blurry edges";
-    
+
     if (m.includes('kling')) {
         return baseNegative + ", slow motion artifacts, flickering, jittery motion, frame stuttering, unnatural locomotion";
     }
-    
+
     if (m.includes('luma')) {
         return baseNegative + ", static frozen frame, no motion, stuck elements, physics violations";
     }
-    
+
     if (m.includes('veo')) {
         return baseNegative + ", low resolution, heavy compression, audio desync, muffled sound";
     }
-    
+
     return baseNegative + ", low quality, amateur, unnatural";
 };
 
@@ -410,7 +410,7 @@ export const filterCategories = (cats: any[], targetModel?: string) => {
     if (!keyword) return cats;
 
     const filtered = cats.filter(c => c.platform.includes(keyword));
-    
+
     // If no matches for specific platform, return all categories
     // This allows AI to adapt prompt for the selected platform
     return filtered.length > 0 ? filtered : cats;
@@ -506,6 +506,18 @@ export const getTrendingAudio2026 = () => [
     "Apna Time Aayega - Gully Boy anthem",
     "Bhaag DK Bose remix - chaotic energy"
 ];
+
+// ===== GLITCH & CHAOS VISUALS (2026) =====
+
+export const getGlitchKeywords = () => `
+**GLITCH EFFECTS VOCABULARY:**
+- **Datamoshing**: pixel bleeding, motion vector destruction, frame blending
+- **Digital Decay**: compression artifacts, jpeg crust, bit-rot, signal noise
+- **Color Glitch**: RGB split, chromatic aberration, channel shift, hue cycle
+- **Structure Break**: pixel sorting, voronoi fracture, vertex displacement, geometric dissolve
+- **Retro Glitch**: VHS tracking error, CRT scanlines, magnetic strip distortion, analog static
+- **AI Hallucination**: deepdream patterns, morphing geometry, uncanny valley distortion
+`;
 
 // ===== PLATFORM COMPARISON MATRIX =====
 

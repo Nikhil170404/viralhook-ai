@@ -4,11 +4,9 @@ import {
     getRunwayInstructions,
     getVeoInstructions,
     getPhysicsKeywords,
-    applyVHSEffect
+    applyVHSEffect,
+    getGlitchKeywords
 } from '../helpers';
-
-// Helper for glitch keywords (not in main helpers yet)
-const getGlitchKeywords = () => "datamoshing, compression artifact, rgb split, pixel sorting, jpeg artifact";
 
 /**
  * CHAOS MODE - Maximum Virality, Glitch, and Physics Breaking
@@ -21,9 +19,9 @@ export function getChaosPrompt(object: string, targetModel?: string) {
     if (targetModel?.toLowerCase().includes("kling")) platformInstructions = getKlingInstructions();
     else if (targetModel?.toLowerCase().includes("runway")) platformInstructions = getRunwayInstructions();
     else if (targetModel?.toLowerCase().includes("veo")) platformInstructions = getVeoInstructions();
-    else platformInstructions = getKlingInstructions() + "\n" + getRunwayInstructions(); // Best of both if auto
+    else platformInstructions = getKlingInstructions() + "\n" + getRunwayInstructions();
 
-    // ✅ 2026 LATEST CHAOS TRENDS
+    // ✅ 2026 LATEST CHAOS TRENDS (Expanded to 6 scenarios)
     const chaosScenarios = [
         {
             category: "Physics Break",
@@ -68,6 +66,28 @@ export function getChaosPrompt(object: string, targetModel?: string) {
             estimatedTime: "8 mins (Kling) + 5 mins post",
             postProcessing: "Overlay Windows XP error sounds. Add CRT monitor filter.",
             commonIssues: "Text renders poorly - focus on binary 'rain' visuals."
+        },
+        {
+            category: "AI Hallucination Loop",
+            chaosAction: `The ${object} continuously morphs into different related objects every 0.5 seconds (e.g., Cat -> Tiger -> Bread -> Cloud -> Cat) in a seamless, dream-like loop.`,
+            visualStyle: "DeepDream aesthetic, morphing, surrealism, fluid transitions",
+            viralHook: "Don't watch this while high 🍄",
+            platform: "Luma (Loop mode)",
+            difficulty: "Hard",
+            estimatedTime: "12 mins (Luma) + 5 mins post",
+            postProcessing: "Add psychedelic trance music. Loop the video perfectly.",
+            commonIssues: "Morphing can look ugly - use 'smooth transition' keyword."
+        },
+        {
+            category: "Frozen Time Glitch",
+            chaosAction: `Time freezes for the background, but the ${object} continues moving at 10x speed, vibrating and leaving 'ghost' trails behind it.`,
+            visualStyle: "Long exposure light trails, motion after-image, ghosting effect",
+            viralHook: "Ping: 999ms 🔴",
+            platform: "Runway Gen-4 (Motion Brush)",
+            difficulty: "Medium",
+            estimatedTime: "8 mins (Runway) + 3 mins post",
+            postProcessing: "Add dial-up internet sound. Add lag/buffering icon overlay.",
+            commonIssues: "If background moves, the effect fails. 'Static Brush' is mandatory."
         }
     ];
 
@@ -102,12 +122,27 @@ Integrate the object naturally into the following action:
 **VISUAL STYLE**:
 ${randomChaos.visualStyle}
 
+**FEW-SHOT EXAMPLES (LEARN FROM THESE)**:
+
+✅ **GOOD OUTPUT (Platform-Specific + Detailed)**:
+{
+  "prompt": "A rusted 1998 Toyota Corolla (Subject) melting into liquid chrome puddle on the asphalt. Physics: 'Viscosity', 'Fluid Simulation'. The liquid then defies gravity involving 'Datamoshing' artifacts to reform into a floating geometric cube. Camera: Static locked-off shot (Kling requirement). Lighting: Neon purple strobe. Duration: 5s. Style: Glitch art.",
+  "hook": "Physics.exe has left the chat 💀"
+}
+
+❌ **BAD OUTPUT (Generic + Lazy)**:
+{
+  "prompt": "The car melts and glitches out wildly.",
+  "hook": "So crazy"
+}
+
 **STRICT RULES**:
 1. Break physics completely.
 2. Maximize visual confusion and surprise.
 3. Duration: 5 seconds.
 4. NO logic, pure content.
 5. Use the provided Physics/Glitch vocabulary to enhance the prompt.
+6. **Integrate the object** naturally into the chaos (don't just paste the name).
 
 ${negPrompt ? `Avoid: ${negPrompt}` : ''}
 

@@ -42,6 +42,36 @@ export function getCinematicPrompt(object: string, targetModel?: string) {
             commonIssues: "Face consistency can drop in wide shots - keep camera close."
         },
         {
+            category: "South Indian Mass Entry",
+            photoPlacement: `The ${object} standing in silhouette against a massive dust storm, back turned then slowly turning.`,
+            cinematicAction: `Dust and smoke billow around the ${object}, strong rim lighting creates a golden halo. Debris floats in slow motion.`,
+            cameraWork: "Low angle 'Hero Shot', rapid zoom-in (crash zoom), slow motion walk",
+            mood: "Hype, powerful, mass appeal, larger than life",
+            platform: "Kling (Motion control), Runway",
+            viralHook: "Goosebumps guaranteed 🔥",
+            aesthetic: "High contrast, backlit smoke, warm color grading (Teal & Orange)",
+            expectedViews: "10-50M views (Viral in India)",
+            difficulty: "Medium",
+            estimatedTime: "10 mins (Kling) + 5 mins post",
+            postProcessing: "Add 'Mass BGM' (heavy drums). Ramping speed effect (slow -> fast -> slow).",
+            commonIssues: "Smoke can obscure subject - specify 'rim lighting' to keep silhouette clear."
+        },
+        {
+            category: "Royal Rajasthani Aesthetic",
+            photoPlacement: `The ${object} framed by an intricate sandstone Jharokha (archway), bathed in golden light.`,
+            cinematicAction: `Soft curtains blowing in the wind, pigeons flying in background, sun rays (god rays) filtering through the arch.`,
+            cameraWork: "Smooth gimbal tracking shot through the archway, revealing the subject",
+            mood: "Regal, timeless, traditional elegance",
+            platform: "Veo 3 (Detail), Kling",
+            viralHook: "Royalty vibes 👑",
+            aesthetic: "Saffron and Gold palette, intricate patterns, soft diffused daylight",
+            expectedViews: "5-15M views",
+            difficulty: "Medium",
+            estimatedTime: "12 mins (Veo) + 8 mins post",
+            postProcessing: "Add 'Padmaavat' style classical score. Enhance gold tones in grading.",
+            commonIssues: "Intricate patterns can blur - use 'high resolution' and 'sharp focus' keywords."
+        },
+        {
             category: "Bollywood Romance",
             photoPlacement: `The ${object} in a vast mustard field, traditional vibe, looking into distance.`,
             cinematicAction: "360-degree orbit camera, rose petals falling, warm 90s golden glow.",
@@ -153,6 +183,20 @@ ${randomScene.cinematicAction}
 
 **Step 3 - Camera Work**:
 ${randomScene.cameraWork}
+
+**FEW-SHOT EXAMPLES (LEARN FROM THESE)**:
+
+✅ **GOOD OUTPUT (Detailed + Professional)**:
+{
+  "prompt": "A traditional clay diya lamp (Subject) framed by a sandstone archway. Lighting: Golden hour backlighting creating a halo effect, with volumetric dust motes dancing in the god rays. Camera: Slow dolly push-in through the arch. Action: Soft curtains blow gently in the wind revealing the lamp. Style: Rajasthani Royal aesthetic, warm saffron tones, high contrast. Platform: Veo 3 4K.",
+  "hook": "Royalty vibes 👑"
+}
+
+❌ **BAD OUTPUT (Generic)**:
+{
+  "prompt": "A lamp in an archway with nice lighting.",
+  "hook": "Cool vibes"
+}
 
 **RULES**:
 1. Make the "${object}" look AMAZING - this is about beauty, not shock.
