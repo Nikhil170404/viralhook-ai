@@ -20,6 +20,7 @@ export default function LibraryPage() {
     const [dbPrompts, setDbPrompts] = useState<PromptTemplate[]>([]);
     const [sortBy, setSortBy] = useState<'newest' | 'popular'>('popular');
     const [selectedMode, setSelectedMode] = useState<string>('all');
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const [page, setPage] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -154,16 +155,50 @@ export default function LibraryPage() {
                             </div>
 
                             {/* Mode Filter */}
-                            <select
-                                value={selectedMode}
-                                onChange={(e) => setSelectedMode(e.target.value)}
-                                className="bg-white/5 border border-white/10 text-gray-300 text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-pink-500/50"
-                            >
-                                <option value="all">All Modes</option>
-                                <option value="chaos">🌀 Chaos</option>
-                                <option value="cinematic">🎬 Cinematic</option>
-                                <option value="shocking">💀 Shocking</option>
-                            </select>
+                            {/* Custom Mode Filter Dropdown */}
+                            <div className="relative z-50">
+                                <button
+                                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                                    onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
+                                    className="flex items-center gap-2 bg-white/5 border border-white/10 text-gray-300 text-xs rounded-xl px-4 py-2 hover:bg-white/10 transition-all min-w-[140px] justify-between"
+                                >
+                                    <span className="flex items-center gap-2">
+                                        {selectedMode === 'all' && "All Modes"}
+                                        {selectedMode === 'chaos' && <>🌀 Chaos</>}
+                                        {selectedMode === 'cinematic' && <>🎬 Cinematic</>}
+                                        {selectedMode === 'shocking' && <>💀 Shocking</>}
+                                    </span>
+                                    <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                    animate={dropdownOpen ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: -10, scale: 0.95 }}
+                                    transition={{ duration: 0.2 }}
+                                    className={`absolute top-full mt-2 right-0 w-full min-w-[160px] bg-black border border-white/10 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl ${dropdownOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                                >
+                                    {[
+                                        { id: 'all', label: 'All Modes', icon: null },
+                                        { id: 'chaos', label: 'Chaos', icon: '🌀' },
+                                        { id: 'cinematic', label: 'Cinematic', icon: '🎬' },
+                                        { id: 'shocking', label: 'Shocking', icon: '💀' }
+                                    ].map((mode) => (
+                                        <button
+                                            key={mode.id}
+                                            onClick={() => {
+                                                setSelectedMode(mode.id);
+                                                setDropdownOpen(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-white/10 transition-all flex items-center gap-2
+                                                ${selectedMode === mode.id ? 'text-pink-400 bg-white/5' : 'text-gray-400'}
+                                            `}
+                                        >
+                                            <span className="w-4">{mode.icon}</span>
+                                            {mode.label}
+                                        </button>
+                                    ))}
+                                </motion.div>
+                            </div>
 
                             {/* Search */}
                             <div className="relative w-full md:w-48 group">
