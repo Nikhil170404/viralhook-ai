@@ -12,7 +12,7 @@ const supabase = createClient(
 );
 
 type Props = {
-    params: { id: string }
+    params: Promise<{ id: string }>
 }
 
 // SEO Metadata
@@ -20,10 +20,12 @@ export async function generateMetadata(
     { params }: Props,
     parent: ResolvingMetadata
 ): Promise<Metadata> {
+    const { id } = await params;
+
     const { data: prompt } = await supabase
         .from('generated_prompts')
         .select('*')
-        .eq('id', params.id)
+        .eq('id', id)
         .single();
 
     if (!prompt) {
@@ -41,11 +43,13 @@ export async function generateMetadata(
 }
 
 export default async function ShareablePromptPage({ params }: Props) {
+    const { id } = await params;
+
     // Fetch Prompt
     const { data: prompt, error } = await supabase
         .from('generated_prompts')
         .select('*')
-        .eq('id', params.id)
+        .eq('id', id)
         .single();
 
     if (error || !prompt) {

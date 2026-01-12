@@ -16,7 +16,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export default function Home() {
   const [session, setSession] = useState<any>(null);
   const [userObject, setUserObject] = useState("");
-  const [selectedPrompt, setSelectedPrompt] = useState<any>(null);
+  const [selectedPrompt, setSelectedPrompt] = useState<any>(null); // Keeping any for now to avoid strict type mismatch with API response if fields differ
   const [generatedResult, setGeneratedResult] = useState("");
   const [isCopied, setIsCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

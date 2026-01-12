@@ -67,7 +67,7 @@ export default function LibraryPage() {
         }
 
         if (data) {
-            const mapped: PromptTemplate[] = data.map((p: any) => ({
+            const mapped: PromptTemplate[] = data.map((p) => ({
                 id: p.id,
                 category: p.category || "Community",
                 platform: p.platform || "Unknown",

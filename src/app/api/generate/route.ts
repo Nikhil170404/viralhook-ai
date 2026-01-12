@@ -101,13 +101,13 @@ export async function POST(req: Request) {
         // 4. Parse Request
         const { object, mode = 'chaos', targetModel, aiModel }: GenerateRequest = await req.json();
 
-        if (!process.env.NEXT_PUBLIC_OPENROUTER_API_KEY) {
+        if (!process.env.OPENROUTER_API_KEY) {
             return NextResponse.json({ error: "Server Configuration Error: API Key Missing" }, { status: 500 });
         }
 
         const openai = new OpenAI({
             baseURL: "https://openrouter.ai/api/v1",
-            apiKey: process.env.NEXT_PUBLIC_OPENROUTER_API_KEY,
+            apiKey: process.env.OPENROUTER_API_KEY,
             defaultHeaders: {
                 "HTTP-Referer": "https://viralhook.ai",
                 "X-Title": "Viral Hooks AI",
@@ -190,7 +190,7 @@ export async function POST(req: Request) {
 
         // 5. DUPLICATE CHECK
         // If we generated the exact same prompt for this user, don't save it again.
-        const { data: existing } = await dbClient
+        let { data: existing } = await dbClient
             .from('generated_prompts')
             .select('id')
             .eq('user_id', user.id)
@@ -212,8 +212,7 @@ export async function POST(req: Request) {
             }).select('id').single();
 
             if (insertedData) {
-                // @ts-ignore
-                existing = { id: insertedData.id };
+                existing = { id: insertedData.id } as any;
             }
             saveError = error;
         }
