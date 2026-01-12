@@ -19,6 +19,7 @@ export default function LibraryPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [dbPrompts, setDbPrompts] = useState<PromptTemplate[]>([]);
     const [sortBy, setSortBy] = useState<'newest' | 'popular'>('popular');
+    const [selectedMode, setSelectedMode] = useState<string>('all');
     const [page, setPage] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -34,14 +35,6 @@ export default function LibraryPage() {
         });
     }, []);
 
-    // Initial Fetch & Fetch on Sort Change
-    useEffect(() => {
-        setPage(0);
-        setDbPrompts([]);
-        setHasMore(true);
-        fetchPrompts(0, true);
-    }, [sortBy]);
-
     const fetchPrompts = async (pageNum: number, isInitial: boolean = false) => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
@@ -49,15 +42,18 @@ export default function LibraryPage() {
         if (isInitial) setIsLoading(true);
         else setIsLoadingMore(true);
 
-        // Sorting Logic: 
-        // 1. Popular: copy_count DESC, created_at DESC 
-        // 2. Newest: created_at DESC, copy_count DESC
         const primarySort = sortBy === 'popular' ? 'copy_count' : 'created_at';
         const secondarySort = sortBy === 'popular' ? 'created_at' : 'copy_count';
 
-        const { data, error } = await supabase
+        let query = supabase
             .from('generated_prompts')
-            .select('*')
+            .select('*');
+
+        if (selectedMode !== 'all') {
+            query = query.eq('mode', selectedMode);
+        }
+
+        const { data, error } = await query
             .order(primarySort, { ascending: false })
             .order(secondarySort, { ascending: false })
             .range(pageNum * PAGE_SIZE, (pageNum + 1) * PAGE_SIZE - 1);
@@ -88,6 +84,14 @@ export default function LibraryPage() {
         setIsLoading(false);
         setIsLoadingMore(false);
     };
+
+    // Initial Fetch & Fetch on Sort Change
+    useEffect(() => {
+        setPage(0);
+        setDbPrompts([]);
+        setHasMore(true);
+        fetchPrompts(0, true);
+    }, [sortBy, selectedMode]);
 
     const loadMore = () => {
         const nextPage = page + 1;
@@ -148,6 +152,18 @@ export default function LibraryPage() {
                                 <button onClick={() => setSortBy('newest')} className={`px-2 py-1.5 rounded-lg transition-all ${sortBy === 'newest' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`} title="Newest"><Clock className="w-4 h-4" /></button>
                                 <button onClick={() => setSortBy('popular')} className={`px-2 py-1.5 rounded-lg transition-all ${sortBy === 'popular' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`} title="Most Popular"><TrendingUp className="w-4 h-4" /></button>
                             </div>
+
+                            {/* Mode Filter */}
+                            <select
+                                value={selectedMode}
+                                onChange={(e) => setSelectedMode(e.target.value)}
+                                className="bg-white/5 border border-white/10 text-gray-300 text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-pink-500/50"
+                            >
+                                <option value="all">All Modes</option>
+                                <option value="chaos">🌀 Chaos</option>
+                                <option value="cinematic">🎬 Cinematic</option>
+                                <option value="shocking">💀 Shocking</option>
+                            </select>
 
                             {/* Search */}
                             <div className="relative w-full md:w-48 group">

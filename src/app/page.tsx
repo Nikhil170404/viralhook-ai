@@ -16,8 +16,26 @@ import {
   Cpu
 } from "lucide-react";
 import { Navbar } from "@/components/ui/navbar";
+import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default function LandingPage() {
+  const [stats, setStats] = useState({ total_generated: 15403 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const { data, error } = await supabase.rpc('get_stats');
+      if (data && !error) {
+        setStats(prev => ({ ...prev, ...data }));
+      }
+    };
+    fetchStats();
+  }, []);
+
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-pink-500 selection:text-white overflow-x-hidden">
 
@@ -115,7 +133,7 @@ export default function LandingPage() {
       <section className="py-20 border-y border-white/5 bg-white/[0.02]">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
           <div>
-            <div className="text-4xl font-black mb-1">500K+</div>
+            <div className="text-4xl font-black mb-1">{stats.total_generated.toLocaleString()}+</div>
             <div className="text-gray-500 text-sm font-bold uppercase tracking-widest">Generations</div>
           </div>
           <div>

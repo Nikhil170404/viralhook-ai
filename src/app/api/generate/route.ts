@@ -207,7 +207,8 @@ export async function POST(req: Request) {
                 viral_hook: aiContent.hook,
                 category: randomStyle.category,
                 platform: randomStyle.platform,
-                mechanism: randomStyle.mechanism
+                mechanism: randomStyle.mechanism,
+                mode: mode
             });
             saveError = error;
         }
