@@ -24,17 +24,77 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default function LandingPage() {
-  const [stats, setStats] = useState({ total_generated: 15403 });
+  const [stats, setStats] = useState({
+    total_generated: 0,
+    total_creators: 0,
+    total_copies: 0
+  });
 
   useEffect(() => {
     const fetchStats = async () => {
       const { data, error } = await supabase.rpc('get_stats');
       if (data && !error) {
-        setStats(prev => ({ ...prev, ...data }));
+        setStats(data);
       }
     };
     fetchStats();
   }, []);
+
+  const DEMO_HOOKS = [
+    {
+      mode: "CHAOS MODE",
+      icon: Zap,
+      color: "text-pink-400",
+      bg: "bg-pink-500/10",
+      border: "border-pink-500/20",
+      prompt: "A futuristic Indian street scene with neon rickshaws, 8k hyper-realistic, POV shot, chaos in Mumbai 2050..."
+    },
+    {
+      mode: "CINEMATIC PRO",
+      icon: Clapperboard,
+      color: "text-blue-400",
+      bg: "bg-blue-500/10",
+      border: "border-blue-500/20",
+      prompt: "Anamorphic wide shot of a rainy Tokyo alleyway, blade runner style, volumetric fog, Arri Alexa 65, golden hour..."
+    },
+    {
+      mode: "SHOCK LOGIC",
+      icon: Play,
+      color: "text-orange-400",
+      bg: "bg-orange-500/10",
+      border: "border-orange-500/20",
+      prompt: "CCTV footage of a pedestrian walking past a parked truck, tire suddenly explodes, shockwave rips clothes, debris flies, 4k raw footage.."
+    }
+  ];
+
+  const [demoIndex, setDemoIndex] = useState(0);
+  const [displayedText, setDisplayedText] = useState("");
+  const [isTyping, setIsTyping] = useState(true);
+
+  // Rotation Timer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDemoIndex((prev) => (prev + 1) % DEMO_HOOKS.length);
+      setDisplayedText(""); // Reset text for new mode
+      setIsTyping(true);
+    }, 5000); // Increased duration to allow reading
+    return () => clearInterval(interval);
+  }, []);
+
+  // Typewriter Effect
+  useEffect(() => {
+    const targetText = DEMO_HOOKS[demoIndex].prompt;
+    if (displayedText.length < targetText.length) {
+      const timeout = setTimeout(() => {
+        setDisplayedText(targetText.slice(0, displayedText.length + 1));
+      }, 30); // Typing speed
+      return () => clearTimeout(timeout);
+    } else {
+      setIsTyping(false);
+    }
+  }, [displayedText, demoIndex]);
+
+  const currentDemo = DEMO_HOOKS[demoIndex];
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-pink-500 selection:text-white overflow-x-hidden">
@@ -107,12 +167,12 @@ export default function LandingPage() {
                 </div>
 
                 <div className="flex flex-col gap-6 text-left">
-                  <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
-                    <p className="text-pink-400 text-sm font-bold mb-2 flex items-center gap-2">
-                      <Zap className="w-4 h-4" /> CHAOS MODE ACTIVATED
+                  <div className={`p-6 rounded-3xl min-h-[140px] flex flex-col justify-center transition-all duration-500 ${currentDemo.bg} ${currentDemo.border} border`}>
+                    <p className={`text-sm font-bold mb-2 flex items-center gap-2 ${currentDemo.color}`}>
+                      <currentDemo.icon className="w-4 h-4" /> {currentDemo.mode} ACTIVATED
                     </p>
                     <p className="text-lg md:text-xl font-medium text-gray-200">
-                      "A futuristic Indian street scene with neon rickshaws, 8k hyper-realistic, POV shot, chaos in Mumbai 2050..."
+                      "{displayedText}"<span className={`${isTyping ? 'opacity-100' : 'opacity-0'} animate-pulse`}>|</span>
                     </p>
                   </div>
                   <div className="flex gap-4">
@@ -133,16 +193,16 @@ export default function LandingPage() {
       <section className="py-20 border-y border-white/5 bg-white/[0.02]">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
           <div>
-            <div className="text-4xl font-black mb-1">{stats.total_generated.toLocaleString()}+</div>
+            <div className="text-4xl font-black mb-1">{stats.total_generated > 0 ? stats.total_generated.toLocaleString() : '...'}</div>
             <div className="text-gray-500 text-sm font-bold uppercase tracking-widest">Generations</div>
           </div>
           <div>
-            <div className="text-4xl font-black mb-1">12K+</div>
-            <div className="text-gray-500 text-sm font-bold uppercase tracking-widest">Creators</div>
+            <div className="text-4xl font-black mb-1">{stats.total_creators > 0 ? stats.total_creators.toLocaleString() : '...'}</div>
+            <div className="text-gray-500 text-sm font-bold uppercase tracking-widest">Active Creators</div>
           </div>
           <div>
-            <div className="text-4xl font-black mb-1">4.9/5</div>
-            <div className="text-gray-500 text-sm font-bold uppercase tracking-widest">Rating</div>
+            <div className="text-4xl font-black mb-1">{stats.total_copies > 0 ? stats.total_copies.toLocaleString() : '...'}</div>
+            <div className="text-gray-500 text-sm font-bold uppercase tracking-widest">Viral Copies</div>
           </div>
           <div>
             <div className="text-4xl font-black mb-1">2026</div>
