@@ -5,7 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Copy, Check, Sparkles, Zap, Clapperboard, ChevronDown,
-    FileText, Wand2, RefreshCw, ArrowRight, Cpu, Target, Layers
+    FileText, Wand2, RefreshCw, Video, Camera, Sun, Target, Cpu, Layers
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/ui/navbar";
@@ -15,19 +15,34 @@ const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const INTELLIGENCE_MODELS = [
+const AI_MODELS = [
     { id: "tngtech/deepseek-r1t2-chimera:free", name: "DeepSeek R1 (Speed)", icon: Sparkles },
     { id: "xiaomi/mimo-v2-flash:free", name: "Xiaomi MIMO v2", icon: Zap },
     { id: "deepseek/deepseek-r1-0528:free", name: "DeepSeek R1 Pro", icon: Cpu },
-    { id: "tngtech/deepseek-r1t-chimera:free", name: "DeepSeek Chimera", icon: Layers },
+];
+
+const TARGET_MODELS = [
+    { id: "kling", name: "Kling AI", color: "from-blue-500 to-cyan-500" },
+    { id: "runway", name: "Runway", color: "from-purple-500 to-pink-500" },
+    { id: "veo", name: "Veo", color: "from-green-500 to-teal-500" },
+    { id: "luma", name: "Luma", color: "from-orange-500 to-red-500" },
 ];
 
 interface HookResult {
     hook: string;
-    hookType: string;
+    prompt: string;
     fadeOut: string;
-    whyItWorks: string;
-    style: string;
+    viralHook: string;
+    cameraWork: string;
+    lighting: string;
+    hookMoment: string;
+    genre: string;
+    difficulty: string;
+    platformSpecific: {
+        kling?: string;
+        runway?: string;
+        veo?: string;
+    };
 }
 
 export default function HooksPage() {
@@ -39,15 +54,13 @@ export default function HooksPage() {
     const [script, setScript] = useState("");
     const [stylePreference, setStylePreference] = useState("");
     const [mode, setMode] = useState<'chaos' | 'cinematic' | 'shocking'>('shocking');
-    const [aiModel, setAiModel] = useState(INTELLIGENCE_MODELS[0].id);
-    const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+    const [targetModel, setTargetModel] = useState("kling");
+    const [aiModel, setAiModel] = useState(AI_MODELS[0].id);
+    const [isAiDropdownOpen, setIsAiDropdownOpen] = useState(false);
 
     // Results State
-    const [genre, setGenre] = useState("");
-    const [emotionalCore, setEmotionalCore] = useState("");
-    const [scriptSummary, setScriptSummary] = useState("");
-    const [hooks, setHooks] = useState<HookResult[]>([]);
-    const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+    const [result, setResult] = useState<HookResult | null>(null);
+    const [copiedField, setCopiedField] = useState<string | null>(null);
     const [error, setError] = useState("");
 
     // Auth Check
@@ -78,13 +91,13 @@ export default function HooksPage() {
 
     const handleGenerate = async () => {
         if (!script.trim() || script.length < 20) {
-            setError("Please enter a script (at least 20 characters)");
+            setError("Please enter your script (at least 20 characters)");
             return;
         }
 
         setError("");
         setIsGenerating(true);
-        setHooks([]);
+        setResult(null);
 
         try {
             const response = await fetch('/api/hooks', {
@@ -94,6 +107,7 @@ export default function HooksPage() {
                     script,
                     stylePreference,
                     mode,
+                    targetModel,
                     aiModel
                 })
             });
@@ -101,13 +115,21 @@ export default function HooksPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to generate hooks');
+                throw new Error(data.error || 'Failed to generate hook prompt');
             }
 
-            setGenre(data.genre);
-            setEmotionalCore(data.emotionalCore);
-            setScriptSummary(data.scriptSummary);
-            setHooks(data.hooks || []);
+            setResult({
+                hook: data.hook,
+                prompt: data.prompt,
+                fadeOut: data.fadeOut,
+                viralHook: data.viralHook,
+                cameraWork: data.cameraWork,
+                lighting: data.lighting,
+                hookMoment: data.hookMoment,
+                genre: data.genre,
+                difficulty: data.difficulty,
+                platformSpecific: data.platformSpecific || {}
+            });
 
         } catch (err: any) {
             setError(err.message || 'Something went wrong');
@@ -116,16 +138,16 @@ export default function HooksPage() {
         }
     };
 
-    const copyHook = (hook: string, index: number) => {
-        navigator.clipboard.writeText(hook);
-        setCopiedIndex(index);
-        setTimeout(() => setCopiedIndex(null), 2000);
+    const copyToClipboard = (text: string, field: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedField(field);
+        setTimeout(() => setCopiedField(null), 2000);
     };
 
     if (isLoading) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500" />
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500" />
             </div>
         );
     }
@@ -148,10 +170,10 @@ export default function HooksPage() {
                     className="text-center mb-8"
                 >
                     <h1 className="text-3xl md:text-5xl font-black mb-3">
-                        Script <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Hook</span> Generator
+                        Video <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Hook</span> Generator
                     </h1>
                     <p className="text-gray-400 text-sm md:text-base">
-                        Paste your script → Get viral opening hooks
+                        Generate viral opening scenes that fade-out into your main content
                     </p>
                 </motion.div>
 
@@ -166,12 +188,12 @@ export default function HooksPage() {
                     <div className="relative">
                         <label className="block text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
                             <FileText className="w-4 h-4" />
-                            Your Script / Video Content
+                            Your Video Script / Main Content
                         </label>
                         <textarea
                             value={script}
                             onChange={(e) => setScript(e.target.value)}
-                            placeholder="Paste your reel or shorts script here... What is your video about? What happens in it?"
+                            placeholder="Paste your reel or shorts script here... What is your video about? What happens in it? The AI will create an attention-grabbing opening scene that fades out into this content."
                             className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-4 text-white placeholder:text-gray-500 resize-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all"
                             maxLength={2000}
                         />
@@ -184,19 +206,43 @@ export default function HooksPage() {
                     <div>
                         <label className="block text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
                             <Wand2 className="w-4 h-4" />
-                            Style Preference (Optional)
+                            Visual Style (Optional)
                         </label>
                         <input
                             type="text"
                             value={stylePreference}
                             onChange={(e) => setStylePreference(e.target.value)}
-                            placeholder="e.g., funny, mysterious, dramatic, relatable..."
+                            placeholder="e.g., mysterious, dramatic zoom, freeze frame, POV shot..."
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-500 focus:ring-2 focus:ring-orange-500/50 transition-all"
                             maxLength={200}
                         />
                     </div>
 
-                    {/* Mode & Model Selectors */}
+                    {/* Target Model Selection */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                            <Video className="w-4 h-4" />
+                            Target Video AI
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {TARGET_MODELS.map((model) => (
+                                <button
+                                    key={model.id}
+                                    onClick={() => setTargetModel(model.id)}
+                                    className={cn(
+                                        "px-4 py-2.5 rounded-xl text-xs font-bold transition-all border",
+                                        targetModel === model.id
+                                            ? `bg-gradient-to-r ${model.color} text-white border-transparent`
+                                            : "bg-white/5 text-gray-400 border-white/10 hover:border-white/20"
+                                    )}
+                                >
+                                    {model.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Mode & AI Model */}
                     <div className="flex flex-col sm:flex-row gap-3">
                         {/* Mode Selector */}
                         <div className="flex bg-gray-900/50 rounded-xl p-1 flex-1">
@@ -224,28 +270,28 @@ export default function HooksPage() {
                         {/* AI Model Dropdown */}
                         <div className="relative">
                             <button
-                                onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                                onClick={() => setIsAiDropdownOpen(!isAiDropdownOpen)}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-gray-900/50 border border-white/10 rounded-xl text-xs font-medium text-gray-300 hover:text-white transition-all min-w-[160px]"
                             >
                                 <Cpu className="w-3.5 h-3.5 text-purple-400" />
-                                <span className="truncate">{INTELLIGENCE_MODELS.find(m => m.id === aiModel)?.name}</span>
-                                <ChevronDown className={cn("w-3.5 h-3.5 ml-auto transition-transform", isModelDropdownOpen && "rotate-180")} />
+                                <span className="truncate">{AI_MODELS.find(m => m.id === aiModel)?.name}</span>
+                                <ChevronDown className={cn("w-3.5 h-3.5 ml-auto transition-transform", isAiDropdownOpen && "rotate-180")} />
                             </button>
 
                             <AnimatePresence>
-                                {isModelDropdownOpen && (
+                                {isAiDropdownOpen && (
                                     <motion.div
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 10 }}
-                                        className="absolute top-full mt-2 right-0 w-64 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-50 p-1.5"
+                                        className="absolute top-full mt-2 right-0 w-56 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-50 p-1.5"
                                     >
-                                        {INTELLIGENCE_MODELS.map((model) => (
+                                        {AI_MODELS.map((model) => (
                                             <button
                                                 key={model.id}
                                                 onClick={() => {
                                                     setAiModel(model.id);
-                                                    setIsModelDropdownOpen(false);
+                                                    setIsAiDropdownOpen(false);
                                                 }}
                                                 className={cn(
                                                     "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all",
@@ -254,7 +300,6 @@ export default function HooksPage() {
                                             >
                                                 <model.icon className="w-4 h-4" />
                                                 {model.name}
-                                                {aiModel === model.id && <Check className="w-3.5 h-3.5 ml-auto text-purple-400" />}
                                             </button>
                                         ))}
                                     </motion.div>
@@ -286,12 +331,12 @@ export default function HooksPage() {
                         {isGenerating ? (
                             <>
                                 <RefreshCw className="w-5 h-5 animate-spin" />
-                                Analyzing Script...
+                                Generating Hook Scene...
                             </>
                         ) : (
                             <>
                                 <Wand2 className="w-5 h-5" />
-                                Generate Viral Hooks
+                                Generate Video Hook Prompt
                             </>
                         )}
                     </button>
@@ -299,82 +344,125 @@ export default function HooksPage() {
 
                 {/* Results Section */}
                 <AnimatePresence>
-                    {hooks.length > 0 && (
+                    {result && (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
                             className="space-y-4"
                         >
-                            {/* Genre & Summary */}
+                            {/* Genre & Difficulty Badges */}
                             <div className="flex flex-wrap items-center gap-2 mb-4">
                                 <span className="px-3 py-1.5 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-full text-xs font-bold text-orange-300">
-                                    {genre}
+                                    {result.genre}
                                 </span>
-                                {emotionalCore && (
-                                    <span className="px-3 py-1.5 bg-purple-500/20 border border-purple-500/30 rounded-full text-xs font-medium text-purple-300">
-                                        {emotionalCore}
-                                    </span>
-                                )}
+                                <span className={cn(
+                                    "px-3 py-1.5 rounded-full text-xs font-medium border",
+                                    result.difficulty === 'Easy' ? "bg-green-500/20 border-green-500/30 text-green-300" :
+                                        result.difficulty === 'Hard' ? "bg-red-500/20 border-red-500/30 text-red-300" :
+                                            "bg-yellow-500/20 border-yellow-500/30 text-yellow-300"
+                                )}>
+                                    {result.difficulty}
+                                </span>
+                                <span className="px-3 py-1.5 bg-purple-500/20 border border-purple-500/30 rounded-full text-xs font-medium text-purple-300">
+                                    {targetModel.toUpperCase()} Ready
+                                </span>
                             </div>
 
-                            {scriptSummary && (
-                                <p className="text-gray-400 text-sm mb-6 italic">
-                                    "{scriptSummary}"
-                                </p>
-                            )}
-
-                            {/* Hook Cards */}
-                            <div className="grid gap-4">
-                                {hooks.map((hook, index) => (
-                                    <motion.div
-                                        key={index}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: index * 0.1 }}
-                                        className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-orange-500/30 transition-all group"
+                            {/* Hook Text */}
+                            <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-2xl p-5">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs font-bold text-orange-400">HOOK TEXT</span>
+                                    <button
+                                        onClick={() => copyToClipboard(result.hook, 'hook')}
+                                        className="p-1.5 rounded-lg hover:bg-white/10 transition-all"
                                     >
-                                        <div className="flex items-start justify-between gap-4 mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-bold px-2 py-1 bg-orange-500/20 text-orange-300 rounded-lg">
-                                                    {hook.hookType}
-                                                </span>
-                                                <span className="text-xs text-gray-500">
-                                                    {hook.style}
-                                                </span>
-                                            </div>
-                                            <button
-                                                onClick={() => copyHook(hook.hook, index)}
-                                                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all"
-                                            >
-                                                {copiedIndex === index ? (
-                                                    <Check className="w-4 h-4 text-green-400" />
-                                                ) : (
-                                                    <Copy className="w-4 h-4 text-gray-400" />
-                                                )}
-                                            </button>
-                                        </div>
-
-                                        <p className="text-lg font-medium text-white mb-3 leading-relaxed">
-                                            "{hook.hook}"
-                                        </p>
-
-                                        <div className="flex flex-col sm:flex-row gap-2 text-xs text-gray-500">
-                                            <div className="flex items-center gap-1.5">
-                                                <ArrowRight className="w-3 h-3" />
-                                                <span className="text-gray-400">Fade-out:</span>
-                                                {hook.fadeOut}
-                                            </div>
-                                        </div>
-
-                                        {hook.whyItWorks && (
-                                            <p className="mt-3 text-xs text-gray-500 italic">
-                                                💡 {hook.whyItWorks}
-                                            </p>
-                                        )}
-                                    </motion.div>
-                                ))}
+                                        {copiedField === 'hook' ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                                    </button>
+                                </div>
+                                <p className="text-xl font-bold text-white">"{result.hook}"</p>
                             </div>
+
+                            {/* Main Video Prompt */}
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-xs font-bold text-gray-400 flex items-center gap-2">
+                                        <Video className="w-4 h-4" />
+                                        VIDEO PROMPT (Copy to {targetModel.toUpperCase()})
+                                    </span>
+                                    <button
+                                        onClick={() => copyToClipboard(result.prompt, 'prompt')}
+                                        className="px-3 py-1.5 rounded-lg bg-orange-500/20 text-orange-300 text-xs font-bold hover:bg-orange-500/30 transition-all flex items-center gap-1.5"
+                                    >
+                                        {copiedField === 'prompt' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                        Copy Prompt
+                                    </button>
+                                </div>
+                                <p className="text-gray-200 leading-relaxed">{result.prompt}</p>
+                            </div>
+
+                            {/* Details Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Fade-Out */}
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 mb-2">
+                                        <Target className="w-4 h-4" />
+                                        FADE-OUT TRANSITION
+                                    </div>
+                                    <p className="text-gray-300 text-sm">{result.fadeOut}</p>
+                                </div>
+
+                                {/* Camera Work */}
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 mb-2">
+                                        <Camera className="w-4 h-4" />
+                                        CAMERA WORK
+                                    </div>
+                                    <p className="text-gray-300 text-sm">{result.cameraWork}</p>
+                                </div>
+
+                                {/* Lighting */}
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 mb-2">
+                                        <Sun className="w-4 h-4" />
+                                        LIGHTING
+                                    </div>
+                                    <p className="text-gray-300 text-sm">{result.lighting}</p>
+                                </div>
+
+                                {/* Hook Moment */}
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 mb-2">
+                                        <Zap className="w-4 h-4" />
+                                        HOOK MOMENT
+                                    </div>
+                                    <p className="text-gray-300 text-sm">{result.hookMoment}</p>
+                                </div>
+                            </div>
+
+                            {/* Why It Works */}
+                            <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-4">
+                                <div className="text-xs font-bold text-purple-400 mb-2">💡 WHY THIS HOOK WORKS</div>
+                                <p className="text-gray-300 text-sm">{result.viralHook}</p>
+                            </div>
+
+                            {/* Platform Specific */}
+                            {result.platformSpecific && Object.keys(result.platformSpecific).length > 0 && (
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                                    <div className="text-xs font-bold text-gray-400 mb-3">PLATFORM SETTINGS</div>
+                                    <div className="space-y-2 text-sm">
+                                        {result.platformSpecific.kling && (
+                                            <div><span className="text-blue-400 font-medium">Kling:</span> <span className="text-gray-400">{result.platformSpecific.kling}</span></div>
+                                        )}
+                                        {result.platformSpecific.runway && (
+                                            <div><span className="text-purple-400 font-medium">Runway:</span> <span className="text-gray-400">{result.platformSpecific.runway}</span></div>
+                                        )}
+                                        {result.platformSpecific.veo && (
+                                            <div><span className="text-green-400 font-medium">Veo:</span> <span className="text-gray-400">{result.platformSpecific.veo}</span></div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>

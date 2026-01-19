@@ -1,132 +1,155 @@
 /**
- * Hook Generation AI Mode
- * Analyzes video scripts and generates viral opening hooks
+ * Hook Generation AI Mode - Video Prompt Style
+ * Generates VISUAL video hook prompts (like cinematic mode) that fade-out into main content
  */
 
 import {
     getKlingInstructions,
     getRunwayInstructions,
     getVeoInstructions,
-    getLumaInstructions
+    getLumaInstructions,
+    getPhysicsKeywords,
+    getNegativePrompt
 } from '../helpers';
 
-// ===== HOOK TYPES =====
-const HOOK_PATTERNS = [
-    { type: "POV", template: "POV: [situation from script]", description: "First-person relatable scenario" },
-    { type: "Mystery", template: "Nobody talks about this but...", description: "Creates curiosity gap" },
-    { type: "Challenge", template: "I bet you can't watch without...", description: "Engagement trigger" },
-    { type: "Story", template: "When I was [age], I discovered...", description: "Personal narrative hook" },
-    { type: "Shock", template: "This changes everything about...", description: "Revelation hook" },
-    { type: "Relatable", template: "Tell me you're [X] without telling me...", description: "Trend-based hook" },
-    { type: "Question", template: "What would you do if...?", description: "Direct engagement" },
-    { type: "Controversy", template: "Unpopular opinion:", description: "Debate trigger" },
-    { type: "Tutorial", template: "Here's a trick they don't teach you...", description: "Value proposition" },
-    { type: "Cliffhanger", template: "Wait for it...", description: "Anticipation builder" }
+// ===== HOOK STYLES FOR VISUAL PROMPTS =====
+const VISUAL_HOOK_STYLES = [
+    { name: "Mystery Reveal", description: "Start with obscured/partial view, slowly reveal the unexpected" },
+    { name: "Shock Freeze", description: "Dramatic freeze frame at peak moment, then fade to context" },
+    { name: "POV Discovery", description: "First-person perspective discovering something unusual" },
+    { name: "Impossible Scene", description: "Physically impossible or surreal opening that demands explanation" },
+    { name: "Tension Build", description: "Slow zoom/push-in on subject with building suspense" },
+    { name: "Before/After Tease", description: "Show the dramatic 'after' state first, fade to setup" },
+    { name: "Chaos Freeze", description: "Freeze mid-action in chaotic moment, objects suspended" },
+    { name: "Time Stop", description: "Everything frozen except one element, creating intrigue" }
 ];
 
-// ===== GENRE DETECTION =====
-const GENRES = [
-    "Comedy", "Motivation", "Tutorial", "Storytelling", "Lifestyle",
-    "Drama", "Educational", "Entertainment", "News", "Review",
-    "Fitness", "Cooking", "Travel", "Fashion", "Tech", "Gaming"
-];
-
-// ===== FADE OUT STYLES =====
-const FADE_OUTS = [
-    "Slow zoom out revealing the full scene",
-    "Quick cut to black with text overlay",
-    "Face freeze with dramatic music drop",
-    "Smash cut to the main content",
-    "Dolly out with motion blur transition",
-    "Split-second flash to hook visual",
-    "Audio fade with visual blur",
-    "Snap zoom out with beat drop"
+// ===== FADE-OUT TRANSITIONS =====
+const FADE_OUT_STYLES = [
+    "Slow dissolve to white/black as scene transitions",
+    "Zoom out with motion blur into next scene",
+    "Freeze frame with subtle vignette fade",
+    "Objects slowly defocus as camera pulls back",
+    "Light bloom effect consuming the frame",
+    "Quick whip pan transitioning to main content",
+    "Particles/dust settling as scene changes",
+    "Depth of field shift blurring the hook scene"
 ];
 
 // ===== MAIN PROMPT GENERATOR =====
 export function getHooksPrompt(
     script: string,
     stylePreference: string = "",
-    mode: 'chaos' | 'cinematic' | 'shocking' = 'shocking'
-): { systemPrompt: string; hookPatterns: typeof HOOK_PATTERNS } {
+    mode: 'chaos' | 'cinematic' | 'shocking' = 'shocking',
+    targetModel: string = 'kling'
+): { systemPrompt: string } {
+
+    // Get platform-specific instructions
+    let platformInstructions = '';
+    switch (targetModel?.toLowerCase()) {
+        case 'runway':
+            platformInstructions = getRunwayInstructions();
+            break;
+        case 'veo':
+            platformInstructions = getVeoInstructions();
+            break;
+        case 'luma':
+            platformInstructions = getLumaInstructions();
+            break;
+        default:
+            platformInstructions = getKlingInstructions();
+    }
+
+    const physicsKeywords = getPhysicsKeywords();
+    const negativePrompts = getNegativePrompt(targetModel);
 
     const modeStyle = mode === 'chaos'
-        ? "wild, unpredictable, high-energy, pattern-interrupt"
+        ? "wild, chaotic, physics-defying, pattern-interrupt with suspended objects and impossible scenarios"
         : mode === 'cinematic'
-            ? "dramatic, visually stunning, emotional, cinematic build-up"
-            : "attention-grabbing, controversial, stop-scroll, shocking revelation";
+            ? "dramatic, visually stunning, Hollywood-quality cinematography with emotional depth"
+            : "attention-grabbing, controversial, stop-scroll, shocking revelation that demands answers";
 
-    const systemPrompt = `You are a viral content strategist who specializes in creating HOOKS for social media shorts and reels.
+    const systemPrompt = `You are an elite AI video prompt engineer specializing in creating VIRAL OPENING HOOKS for social media shorts and reels.
 
 **YOUR TASK:**
-Analyze the provided video script and generate 5 powerful opening hooks that will:
-1. Stop users from scrolling
-2. Create an irresistible curiosity gap
-3. Match the script's tone and genre
-4. Lead naturally into the main content
+Create a VISUAL VIDEO PROMPT that describes the OPENING HOOK SCENE for the user's content. This hook scene will FADE OUT into their main content, so it needs to:
+1. STOP the scroll immediately
+2. Create visual intrigue that demands the viewer watches more
+3. Set up the content without revealing everything
+4. Transition smoothly with a fade-out effect
 
-**SCRIPT TO ANALYZE:**
+**THE USER'S MAIN CONTENT/SCRIPT:**
 """
 ${script}
 """
 
 ${stylePreference ? `**USER'S STYLE PREFERENCE:** ${stylePreference}` : ''}
 
-**MODE:** ${mode.toUpperCase()} - Your hooks should feel: ${modeStyle}
+**MODE:** ${mode.toUpperCase()} - Your visual style should be: ${modeStyle}
 
-**HOOK PATTERNS TO CONSIDER:**
-${HOOK_PATTERNS.map(p => `- ${p.type}: "${p.template}" (${p.description})`).join('\n')}
+**VISUAL HOOK STYLES TO CONSIDER:**
+${VISUAL_HOOK_STYLES.map(s => `- ${s.name}: ${s.description}`).join('\n')}
 
-**FADE-OUT OPTIONS:**
-${FADE_OUTS.map(f => `- ${f}`).join('\n')}
+**FADE-OUT TRANSITIONS:**
+${FADE_OUT_STYLES.join('\n- ')}
 
-**ANALYSIS REQUIREMENTS:**
-1. First, detect the GENRE of the script (choose from: ${GENRES.join(', ')})
-2. Identify the EMOTIONAL CORE (what feeling should viewers have?)
-3. Find the KEY REVEAL or CLIMAX that can be teased
-4. Generate 5 hooks that would make people NEED to watch
+**PLATFORM:** ${targetModel.toUpperCase()}
+${platformInstructions}
 
-**OUTPUT FORMAT (JSON ONLY):**
+**PHYSICS KEYWORDS FOR REALISM:**
+${physicsKeywords}
+
+**AVOID THESE IN YOUR PROMPT:**
+${negativePrompts}
+
+**GENERATE A VIDEO PROMPT WITH THIS EXACT JSON FORMAT:**
 {
-    "genre": "Detected genre",
-    "emotionalCore": "Primary emotion this content evokes",
-    "scriptSummary": "One-line summary of what this video is about",
-    "hooks": [
-        {
-            "hook": "The actual hook text/opening line",
-            "hookType": "POV/Mystery/Challenge/etc",
-            "fadeOut": "Suggested fade-out transition",
-            "whyItWorks": "Brief explanation of why this hook is effective",
-            "style": "The vibe/energy of this hook"
-        }
-    ]
+    "hook": "Short catchy text hook (under 10 words) that could appear on screen",
+    "prompt": "EXTREMELY DETAILED video prompt describing the opening hook scene. Include: [Scene setup] [Subject/Object description] [Camera movement - slow dolly/push-in/crane] [Lighting - dramatic/golden hour/low-key] [Action/Movement in the scene] [Atmosphere/Mood] [The 'hook moment' that creates intrigue]. For ${targetModel} AI video generation. This scene will FADE OUT to the main content.",
+    "fadeOut": "Detailed fade-out transition description. How does this hook scene dissolve/transition into the main content?",
+    "viralHook": "Why this visual hook will stop scrolling (the psychological trigger)",
+    "cameraWork": "Specific camera movement: start position → end position",
+    "lighting": "Lighting setup description",
+    "hookMoment": "The exact frame/moment that creates maximum intrigue",
+    "genre": "Detected genre of the content",
+    "difficulty": "Easy/Medium/Hard for video AI to generate",
+    "platformSpecific": {
+        "kling": "Kling-specific generation settings",
+        "runway": "Runway-specific generation settings",
+        "veo": "Veo-specific generation settings"
+    }
 }
 
-**STRICT RULES:**
-1. Each hook MUST be under 15 words (for fast delivery)
-2. Hooks should feel NATIVE to the platform (TikTok/Reels energy)
-3. Avoid generic hooks - be SPECIFIC to this script
-4. At least one hook should be a "pattern interrupt" (unexpected)
-5. Include diverse hook types (don't repeat the same pattern)
-6. Make sure hooks MATCH the ${mode} mode energy
+**CRITICAL RULES:**
+1. The "prompt" must be a COMPLETE video scene description (100-200 words)
+2. Focus on VISUALS, not dialogue or text
+3. Include specific camera movements (dolly, crane, push-in, whip pan)
+4. The hook should CREATE A QUESTION in the viewer's mind
+5. End with a clear FADE-OUT that transitions to main content
+6. Make it physically possible for AI to generate (no impossible camera moves for the platform)
+7. Match the ${mode} mode energy throughout
 
 Return ONLY valid JSON. No markdown, no explanation.`;
 
-    return { systemPrompt, hookPatterns: HOOK_PATTERNS };
+    return { systemPrompt };
 }
 
 // ===== PARSE AI RESPONSE =====
 export interface HookResult {
+    hook: string;
+    prompt: string;
+    fadeOut: string;
+    viralHook: string;
+    cameraWork: string;
+    lighting: string;
+    hookMoment: string;
     genre: string;
-    emotionalCore: string;
-    scriptSummary: string;
-    hooks: Array<{
-        hook: string;
-        hookType: string;
-        fadeOut: string;
-        whyItWorks: string;
-        style: string;
-    }>;
+    difficulty: string;
+    platformSpecific: {
+        kling?: string;
+        runway?: string;
+        veo?: string;
+    };
 }
 
 export function parseHooksResponse(content: string): HookResult {
@@ -145,25 +168,20 @@ export function parseHooksResponse(content: string): HookResult {
     } catch (e) {
         // Fallback response
         return {
+            hook: "Wait for it...",
+            prompt: "A dramatic scene unfolds with cinematic lighting. Camera slowly pushes in on the subject. Tension builds as details become clearer. The scene freezes at the peak moment of intrigue before fading out.",
+            fadeOut: "Slow dissolve to white as the main content begins",
+            viralHook: "Creates anticipation and curiosity",
+            cameraWork: "Slow push-in from wide to close-up",
+            lighting: "Dramatic side lighting with soft shadows",
+            hookMoment: "The freeze frame at peak tension",
             genre: "Entertainment",
-            emotionalCore: "Curiosity",
-            scriptSummary: "Engaging content",
-            hooks: [
-                {
-                    hook: "Wait till you see what happens next...",
-                    hookType: "Cliffhanger",
-                    fadeOut: "Quick cut to black",
-                    whyItWorks: "Creates anticipation",
-                    style: "Mysterious"
-                },
-                {
-                    hook: "Nobody is talking about this...",
-                    hookType: "Mystery",
-                    fadeOut: "Slow zoom out",
-                    whyItWorks: "Creates exclusivity",
-                    style: "Intriguing"
-                }
-            ]
+            difficulty: "Medium",
+            platformSpecific: {
+                kling: "Use dramatic mode, 5s duration",
+                runway: "Gen-3 with motion brush on subject",
+                veo: "Standard settings, high motion"
+            }
         };
     }
 }

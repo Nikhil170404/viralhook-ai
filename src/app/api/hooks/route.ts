@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import { redis } from '@/lib/redis';
 import { getHooksPrompt, parseHooksResponse } from '@/lib/ai/modes/hooks';
-import { sanitizeInput, SANITIZE_CONFIG } from '@/lib/security/sanitize';
+import { sanitizeInput } from '@/lib/security/sanitize';
 import { moderateContent } from '@/lib/security/content-filter';
 
 // --- CONFIGURATION ---
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
 
         // 3. Parse Request
         const body = await req.json();
-        const { script, stylePreference = '', mode = 'shocking', aiModel } = body;
+        const { script, stylePreference = '', mode = 'shocking', aiModel, targetModel = 'kling' } = body;
 
         // 4. Validate Script
         if (!script || typeof script !== 'string') {
@@ -118,11 +118,12 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Invalid script content" }, { status: 400 });
         }
 
-        // 7. Generate Prompt
+        // 7. Generate Prompt with targetModel for platform-specific instructions
         const { systemPrompt } = getHooksPrompt(
             sanitizedScript.sanitized,
             stylePreference,
-            mode as 'chaos' | 'cinematic' | 'shocking'
+            mode as 'chaos' | 'cinematic' | 'shocking',
+            targetModel
         );
 
         // 8. Call AI
@@ -135,7 +136,7 @@ export async function POST(req: Request) {
             apiKey: process.env.OPENROUTER_API_KEY,
             defaultHeaders: {
                 "HTTP-Referer": "https://viralhook.ai",
-                "X-Title": "Viral Hooks AI - Script Hooks",
+                "X-Title": "Viral Hooks AI - Video Hook Prompts",
             }
         });
 
@@ -145,31 +146,38 @@ export async function POST(req: Request) {
             model: selectedModel,
             messages: [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: "Generate hooks for this script." }
+                { role: "user", content: "Generate a visual video hook prompt for this script." }
             ],
         });
 
         const content = completion.choices[0].message.content || "";
 
-        // 9. Parse Response
-        const hooksResult = parseHooksResponse(content);
+        // 9. Parse Response (now returns single video prompt, not array of text hooks)
+        const hookResult = parseHooksResponse(content);
 
-        // 10. Return
+        // 10. Return the video prompt format
         return NextResponse.json({
             success: true,
             requestId,
-            genre: hooksResult.genre,
-            emotionalCore: hooksResult.emotionalCore,
-            scriptSummary: hooksResult.scriptSummary,
-            hooks: hooksResult.hooks,
+            hook: hookResult.hook,
+            prompt: hookResult.prompt,
+            fadeOut: hookResult.fadeOut,
+            viralHook: hookResult.viralHook,
+            cameraWork: hookResult.cameraWork,
+            lighting: hookResult.lighting,
+            hookMoment: hookResult.hookMoment,
+            genre: hookResult.genre,
+            difficulty: hookResult.difficulty,
+            platformSpecific: hookResult.platformSpecific,
             mode,
+            targetModel,
             aiModel: selectedModel
         });
 
     } catch (error: any) {
         console.error(`[${requestId}] Hooks API Error:`, error);
         return NextResponse.json(
-            { error: "Failed to generate hooks", debug: process.env.NODE_ENV === 'development' ? error.message : undefined },
+            { error: "Failed to generate hook prompt", debug: process.env.NODE_ENV === 'development' ? error.message : undefined },
             { status: 500 }
         );
     }
