@@ -262,6 +262,14 @@ export default function HistoryPage() {
                                     </button>
 
                                     <button
+                                        onClick={() => handleEditClick(prompt)}
+                                        className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white transition-colors"
+                                        title="Edit Prompt"
+                                    >
+                                        <Pencil className="w-3 h-3" />
+                                    </button>
+
+                                    <button
                                         onClick={() => handleDelete(prompt.id)}
                                         disabled={deletingId === prompt.id}
                                         className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition-colors"

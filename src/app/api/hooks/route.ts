@@ -6,6 +6,7 @@ import { redis } from '@/lib/redis';
 import { getHooksPrompt, parseHooksResponse } from '@/lib/ai/modes/hooks';
 import { sanitizeInput } from '@/lib/security/sanitize';
 import { moderateContent } from '@/lib/security/content-filter';
+import { logger, createRequestLogger } from '@/lib/logger';
 
 // --- CONFIGURATION ---
 const CONFIG = {
@@ -47,6 +48,7 @@ function checkMemoryRateLimit(userId: string, maxRequests: number): { allowed: b
 
 export async function POST(req: Request) {
     const requestId = crypto.randomUUID().slice(0, 8);
+    const log = createRequestLogger(requestId);
 
     try {
         const cookieStore = await cookies();
@@ -68,6 +70,8 @@ export async function POST(req: Request) {
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+
+        if (user) log.child({ userId: user.id });
 
         // 2. Rate Limiting
         const rateLimitKey = `hooks_limit:${user.id}`;
@@ -106,6 +110,7 @@ export async function POST(req: Request) {
         // 5. Content Moderation
         const modResult = moderateContent(script);
         if (!modResult.isAllowed) {
+            log.warn(`Content moderation blocked: ${modResult.category}`, { category: modResult.category });
             return NextResponse.json({
                 error: "Content policy violation",
                 category: modResult.category
@@ -115,6 +120,7 @@ export async function POST(req: Request) {
         // 6. Sanitize Input
         const sanitizedScript = sanitizeInput(script, CONFIG.SCRIPT.MAX_LENGTH);
         if (!sanitizedScript.isValid) {
+            log.warn(`Sanitization blocked script`, { errors: sanitizedScript });
             return NextResponse.json({ error: "Invalid script content" }, { status: 400 });
         }
 
@@ -128,6 +134,7 @@ export async function POST(req: Request) {
 
         // 8. Call AI
         if (!process.env.OPENROUTER_API_KEY) {
+            log.error("API Key Missing");
             return NextResponse.json({ error: "API configuration error" }, { status: 500 });
         }
 
@@ -184,10 +191,10 @@ export async function POST(req: Request) {
             if (!insertError && insertedData) {
                 savedId = insertedData.id;
             } else {
-                console.error(`[${requestId}] Failed to save hook:`, insertError);
+                log.error(`Failed to save hook:`, insertError as any);
             }
         } catch (saveError) {
-            console.error(`[${requestId}] Database save error:`, saveError);
+            log.error(`Database save error:`, saveError as any);
             // Continue even if save fails
         }
 
@@ -212,7 +219,7 @@ export async function POST(req: Request) {
         });
 
     } catch (error: any) {
-        console.error(`[${requestId}] Hooks API Error:`, error);
+        logger.error(`[${requestId}] Hooks API Error: ${error.message}`, error);
         return NextResponse.json(
             { error: "Failed to generate hook prompt", debug: process.env.NODE_ENV === 'development' ? error.message : undefined },
             { status: 500 }

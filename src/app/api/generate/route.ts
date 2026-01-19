@@ -7,35 +7,32 @@ import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import { redis } from '@/lib/redis';
+import { logger, createRequestLogger } from '@/lib/logger';
 
-// ===== SECURITY IMPORTS =====
 import { validateAndSanitizeInputs, escapeForPrompt } from '@/lib/security/sanitize';
 import { moderateAllInputs } from '@/lib/security/content-filter';
 import { validateGenerateRequest } from '@/lib/schemas/generate';
 
-// --- CONFIGURATION CONSTANTS ---
 const CONFIG = {
     RATE_LIMIT: {
         MAX_REQUESTS: 5,
         WINDOW_MS: 60_000,
-        FALLBACK_MAX: 3, // Stricter when Redis is down
+        FALLBACK_MAX: 3,
     },
     AI: {
         TIMEOUT_SECONDS: 60,
         MODEL: 'tngtech/deepseek-r1t2-chimera:free',
     },
     CACHE: {
-        TTL_SECONDS: 3600, // 1 hour cache for responses
+        TTL_SECONDS: 3600,
     }
 } as const;
 
-// In-memory fallback rate limiter (when Redis fails)
 const memoryRateLimiter = new Map<string, { count: number; resetAt: number }>();
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
-// ===== HELPER: Get Client IP =====
 function getClientIP(req: Request): string {
     const forwarded = req.headers.get('x-forwarded-for');
     if (forwarded) {
@@ -48,13 +45,11 @@ function getClientIP(req: Request): string {
     return 'unknown';
 }
 
-// ===== HELPER: Memory-based rate limiting fallback =====
 function checkMemoryRateLimit(userId: string, maxRequests: number): { allowed: boolean; remaining: number } {
     const now = Date.now();
     const record = memoryRateLimiter.get(userId);
 
     if (!record || record.resetAt < now) {
-        // New window
         memoryRateLimiter.set(userId, { count: 1, resetAt: now + 60000 });
         return { allowed: true, remaining: maxRequests - 1 };
     }
@@ -67,7 +62,6 @@ function checkMemoryRateLimit(userId: string, maxRequests: number): { allowed: b
     return { allowed: true, remaining: maxRequests - record.count };
 }
 
-// ===== HELPER: Create cache key =====
 function createCacheKey(object: string, mode: string, targetModel: string): string {
     const normalized = `${object.toLowerCase().trim()}:${mode}:${targetModel || 'auto'}`;
     return `prompt_cache:${Buffer.from(normalized).toString('base64').slice(0, 50)}`;
@@ -76,11 +70,11 @@ function createCacheKey(object: string, mode: string, targetModel: string): stri
 export async function POST(req: Request) {
     const requestId = crypto.randomUUID().slice(0, 8);
     const clientIP = getClientIP(req);
+    const log = createRequestLogger(requestId);
 
     try {
         const cookieStore = await cookies();
 
-        // 1. Initialize Supabase Server Client
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -92,7 +86,6 @@ export async function POST(req: Request) {
             }
         );
 
-        // 2. Check Authentication
         let user = null;
         let dbClient = supabase;
 
@@ -121,7 +114,10 @@ export async function POST(req: Request) {
             );
         }
 
-        // 3. Rate Limiting (Redis with Memory Fallback)
+        // We can't easily re-assign context to 'log', but we can just use log as is, 
+        // OR rely on logger middleware (future). 
+        // For now, simple logging is better than no logging.
+
         const rateLimitKey = `rate_limit:${user.id}`;
         let currentCount = 0;
         let ttl = 60;
@@ -134,10 +130,9 @@ export async function POST(req: Request) {
             }
             ttl = await redis.ttl(rateLimitKey);
         } catch (redisError) {
-            console.error(`[${requestId}] Redis Rate Limit Error:`, redisError);
+            log.error(`Redis Rate Limit Error:`, redisError as Error);
             redisAvailable = false;
 
-            // SECURITY FIX: Use memory fallback with stricter limits
             const memoryCheck = checkMemoryRateLimit(user.id, CONFIG.RATE_LIMIT.FALLBACK_MAX);
             if (!memoryCheck.allowed) {
                 return NextResponse.json(
@@ -164,7 +159,6 @@ export async function POST(req: Request) {
             );
         }
 
-        // 4. Parse and Validate Request with Zod
         let rawBody;
         try {
             rawBody = await req.json();
@@ -182,10 +176,9 @@ export async function POST(req: Request) {
 
         const { object: rawObject, mode, targetModel, aiModel, personDescription: rawPerson } = validation.data!;
 
-        // 5. SECURITY: Input Sanitization (Prompt Injection Defense)
         const sanitizeResult = validateAndSanitizeInputs(rawObject, rawPerson);
         if (!sanitizeResult.isValid) {
-            console.warn(`[${requestId}] Sanitization blocked input from user ${user.id}: ${sanitizeResult.errors.join(', ')}`);
+            log.warn(`Sanitization blocked input: ${sanitizeResult.errors.join(', ')}`, { input: rawObject });
             return NextResponse.json(
                 { error: "Invalid input detected", details: sanitizeResult.errors },
                 { status: 400 }
@@ -195,17 +188,15 @@ export async function POST(req: Request) {
         const object = sanitizeResult.object;
         const personDescription = sanitizeResult.personDescription;
 
-        // 6. SECURITY: Content Moderation
         const moderationResult = moderateAllInputs(object, personDescription);
         if (!moderationResult.isAllowed) {
-            console.warn(`[${requestId}] Content moderation blocked: ${moderationResult.category} from user ${user.id}`);
+            log.warn(`Content moderation blocked: ${moderationResult.category}`, { category: moderationResult.category });
             return NextResponse.json(
                 { error: "Content policy violation", category: moderationResult.category },
                 { status: 400 }
             );
         }
 
-        // 7. Check API Key
         if (!process.env.OPENROUTER_API_KEY) {
             return NextResponse.json(
                 { error: "Server Configuration Error: API Key Missing" },
@@ -213,7 +204,6 @@ export async function POST(req: Request) {
             );
         }
 
-        // 8. Check Cache (optional optimization)
         const cacheKey = createCacheKey(object, mode!, targetModel || 'auto');
         let cachedResponse = null;
 
@@ -222,10 +212,9 @@ export async function POST(req: Request) {
                 const cached = await redis.get(cacheKey);
                 if (cached && typeof cached === 'string') {
                     cachedResponse = JSON.parse(cached);
-                    console.log(`[${requestId}] Cache hit for ${cacheKey}`);
+                    log.info(`Cache hit for ${cacheKey}`);
                 }
             } catch (e) {
-                // Cache miss or error, continue with fresh generation
             }
         }
 
@@ -246,7 +235,6 @@ export async function POST(req: Request) {
             }
         });
 
-        // 9. Select Mode Logic
         let systemPrompt = "";
         let randomStyle: any = {};
 
@@ -263,7 +251,6 @@ export async function POST(req: Request) {
                 break;
         }
 
-        // 10. Call AI (with sanitized, escaped input)
         const escapedObject = escapeForPrompt(object);
         const selectedModel = aiModel || CONFIG.AI.MODEL;
         let content = "";
@@ -278,14 +265,13 @@ export async function POST(req: Request) {
             });
             content = completion.choices[0].message.content || "";
         } catch (openaiError: any) {
-            console.error(`[${requestId}] AI Generation Failed:`, openaiError.message);
+            log.error(`AI Generation Failed: ${openaiError.message}`, openaiError);
             return NextResponse.json(
                 { error: `AI Generation Failed: ${openaiError.message}` },
                 { status: 500 }
             );
         }
 
-        // 11. Parse AI Response
         let aiContent: any = { prompt: "Error generating", hook: "Error" };
         try {
             let cleanContent = content;
@@ -300,7 +286,7 @@ export async function POST(req: Request) {
                 aiContent = JSON.parse(cleanContent);
             }
         } catch (parseError: any) {
-            console.error(`[${requestId}] AI Parse Error:`, parseError.message);
+            log.error(`AI Parse Error: ${parseError.message}`, parseError);
             aiContent = {
                 prompt: content,
                 hook: "Viral Content Generated",
@@ -315,7 +301,6 @@ export async function POST(req: Request) {
             };
         }
 
-        // 12. Duplicate Check & Save
         let { data: existing } = await dbClient
             .from('generated_prompts')
             .select('id')
@@ -345,10 +330,9 @@ export async function POST(req: Request) {
         }
 
         if (saveError) {
-            console.error(`[${requestId}] DB Save Error:`, saveError);
+            log.error(`DB Save Error:`, saveError);
         }
 
-        // 13. Build Response
         const responseData = {
             id: existing?.id,
             prompt: aiContent.prompt,
@@ -367,12 +351,10 @@ export async function POST(req: Request) {
             platformSpecific: aiContent.platformSpecific || {},
         };
 
-        // 14. Cache successful response
         if (redisAvailable && !saveError) {
             try {
                 await redis.setex(cacheKey, CONFIG.CACHE.TTL_SECONDS, JSON.stringify(responseData));
             } catch (e) {
-                // Cache write failure is non-fatal
             }
         }
 
@@ -383,7 +365,8 @@ export async function POST(req: Request) {
         });
 
     } catch (error: any) {
-        console.error(`[${requestId}] Unhandled API Error:`, error);
+        // Use global logger for safety in catch block
+        logger.error(`[${requestId}] Unhandled API Error: ${error.message}`, error);
 
         let errorMessage = "An unexpected error occurred.";
         let statusCode = 500;
@@ -400,7 +383,7 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json(
-            { error: errorMessage, requestId, debug: process.env.NODE_ENV === 'development' ? error.message : undefined },
+            { error: errorMessage },
             { status: statusCode }
         );
     }
