@@ -21,9 +21,7 @@ export default function LibraryPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [dbPrompts, setDbPrompts] = useState<PromptTemplate[]>([]);
     const [sortBy, setSortBy] = useState<'newest' | 'popular'>('popular');
-    const [selectedMode, setSelectedMode] = useState<string>('all');
     const [selectedType, setSelectedType] = useState<'all' | 'prompt' | 'hook'>('all'); // NEW: Type filter
-    const [dropdownOpen, setDropdownOpen] = useState(false);
     const [page, setPage] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -52,10 +50,6 @@ export default function LibraryPage() {
         let query = supabase
             .from('generated_prompts')
             .select('*');
-
-        if (selectedMode !== 'all') {
-            query = query.eq('mechanism', selectedMode);
-        }
 
         // Filter by prompt type (prompt vs hook)
         if (selectedType !== 'all') {
@@ -100,7 +94,7 @@ export default function LibraryPage() {
         setDbPrompts([]);
         setHasMore(true);
         fetchPrompts(0, true);
-    }, [sortBy, selectedMode, selectedType]);
+    }, [sortBy, selectedType]);
 
     const loadMore = () => {
         const nextPage = page + 1;
