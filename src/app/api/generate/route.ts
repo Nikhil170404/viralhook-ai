@@ -8,31 +8,75 @@ import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import { redis } from '@/lib/redis';
 
-// Define the interface for the request body
-interface GenerateRequest {
-    object: string;
-    mode?: 'chaos' | 'cinematic' | 'shocking';
-    targetModel?: string; // Video model (Kling, Luma, etc.)
-    aiModel?: string;     // Intelligence engine (DeepSeek, Xiaomi, etc.)
-    personDescription?: string; // NEW: Custom person description
-}
+// ===== SECURITY IMPORTS =====
+import { validateAndSanitizeInputs, escapeForPrompt } from '@/lib/security/sanitize';
+import { moderateAllInputs } from '@/lib/security/content-filter';
+import { validateGenerateRequest } from '@/lib/schemas/generate';
 
 // --- CONFIGURATION CONSTANTS ---
 const CONFIG = {
     RATE_LIMIT: {
         MAX_REQUESTS: 5,
         WINDOW_MS: 60_000,
+        FALLBACK_MAX: 3, // Stricter when Redis is down
     },
     AI: {
         TIMEOUT_SECONDS: 60,
         MODEL: 'tngtech/deepseek-r1t2-chimera:free',
     },
+    CACHE: {
+        TTL_SECONDS: 3600, // 1 hour cache for responses
+    }
 } as const;
+
+// In-memory fallback rate limiter (when Redis fails)
+const memoryRateLimiter = new Map<string, { count: number; resetAt: number }>();
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
+// ===== HELPER: Get Client IP =====
+function getClientIP(req: Request): string {
+    const forwarded = req.headers.get('x-forwarded-for');
+    if (forwarded) {
+        return forwarded.split(',')[0].trim();
+    }
+    const realIp = req.headers.get('x-real-ip');
+    if (realIp) {
+        return realIp;
+    }
+    return 'unknown';
+}
+
+// ===== HELPER: Memory-based rate limiting fallback =====
+function checkMemoryRateLimit(userId: string, maxRequests: number): { allowed: boolean; remaining: number } {
+    const now = Date.now();
+    const record = memoryRateLimiter.get(userId);
+
+    if (!record || record.resetAt < now) {
+        // New window
+        memoryRateLimiter.set(userId, { count: 1, resetAt: now + 60000 });
+        return { allowed: true, remaining: maxRequests - 1 };
+    }
+
+    if (record.count >= maxRequests) {
+        return { allowed: false, remaining: 0 };
+    }
+
+    record.count++;
+    return { allowed: true, remaining: maxRequests - record.count };
+}
+
+// ===== HELPER: Create cache key =====
+function createCacheKey(object: string, mode: string, targetModel: string): string {
+    const normalized = `${object.toLowerCase().trim()}:${mode}:${targetModel || 'auto'}`;
+    return `prompt_cache:${Buffer.from(normalized).toString('base64').slice(0, 50)}`;
+}
+
 export async function POST(req: Request) {
+    const requestId = crypto.randomUUID().slice(0, 8);
+    const clientIP = getClientIP(req);
+
     try {
         const cookieStore = await cookies();
 
@@ -71,39 +115,126 @@ export async function POST(req: Request) {
         }
 
         if (!user) {
-            return NextResponse.json({ error: "Unauthorized. Please log in again." }, { status: 401 });
+            return NextResponse.json(
+                { error: "Unauthorized. Please log in again." },
+                { status: 401 }
+            );
         }
 
-        // 3. Redis Rate Limiting (Ultra Fast)
+        // 3. Rate Limiting (Redis with Memory Fallback)
         const rateLimitKey = `rate_limit:${user.id}`;
         let currentCount = 0;
-        let ttl = 0;
+        let ttl = 60;
+        let redisAvailable = true;
 
         try {
             currentCount = await redis.incr(rateLimitKey);
             if (currentCount === 1) {
-                await redis.expire(rateLimitKey, 60); // 1 minute window
+                await redis.expire(rateLimitKey, 60);
             }
             ttl = await redis.ttl(rateLimitKey);
         } catch (redisError) {
-            console.error("Redis Rate Limit Error:", redisError);
-            // Fallback: allow request if Redis is down? 
-            // Or use Supabase as backup? For now, we'll allow it but log.
-            currentCount = 0;
+            console.error(`[${requestId}] Redis Rate Limit Error:`, redisError);
+            redisAvailable = false;
+
+            // SECURITY FIX: Use memory fallback with stricter limits
+            const memoryCheck = checkMemoryRateLimit(user.id, CONFIG.RATE_LIMIT.FALLBACK_MAX);
+            if (!memoryCheck.allowed) {
+                return NextResponse.json(
+                    { error: "Rate limit exceeded (degraded mode). Please wait." },
+                    { status: 429 }
+                );
+            }
+            currentCount = CONFIG.RATE_LIMIT.FALLBACK_MAX - memoryCheck.remaining;
         }
 
-        if (currentCount > CONFIG.RATE_LIMIT.MAX_REQUESTS) {
+        const maxRequests = redisAvailable ? CONFIG.RATE_LIMIT.MAX_REQUESTS : CONFIG.RATE_LIMIT.FALLBACK_MAX;
+        if (currentCount > maxRequests) {
             return NextResponse.json(
                 { error: `Rate limit exceeded. Please wait ${ttl}s.` },
-                { status: 429, headers: { 'Retry-After': String(ttl), 'X-RateLimit-Limit': String(CONFIG.RATE_LIMIT.MAX_REQUESTS), 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': String(ttl) } }
+                {
+                    status: 429,
+                    headers: {
+                        'Retry-After': String(ttl),
+                        'X-RateLimit-Limit': String(maxRequests),
+                        'X-RateLimit-Remaining': '0',
+                        'X-RateLimit-Reset': String(ttl)
+                    }
+                }
             );
         }
 
-        // 4. Parse Request
-        const { object, mode = 'chaos', targetModel, aiModel, personDescription }: GenerateRequest = await req.json();
+        // 4. Parse and Validate Request with Zod
+        let rawBody;
+        try {
+            rawBody = await req.json();
+        } catch (e) {
+            return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+        }
 
+        const validation = validateGenerateRequest(rawBody);
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: validation.errors },
+                { status: 400 }
+            );
+        }
+
+        const { object: rawObject, mode, targetModel, aiModel, personDescription: rawPerson } = validation.data!;
+
+        // 5. SECURITY: Input Sanitization (Prompt Injection Defense)
+        const sanitizeResult = validateAndSanitizeInputs(rawObject, rawPerson);
+        if (!sanitizeResult.isValid) {
+            console.warn(`[${requestId}] Sanitization blocked input from user ${user.id}: ${sanitizeResult.errors.join(', ')}`);
+            return NextResponse.json(
+                { error: "Invalid input detected", details: sanitizeResult.errors },
+                { status: 400 }
+            );
+        }
+
+        const object = sanitizeResult.object;
+        const personDescription = sanitizeResult.personDescription;
+
+        // 6. SECURITY: Content Moderation
+        const moderationResult = moderateAllInputs(object, personDescription);
+        if (!moderationResult.isAllowed) {
+            console.warn(`[${requestId}] Content moderation blocked: ${moderationResult.category} from user ${user.id}`);
+            return NextResponse.json(
+                { error: "Content policy violation", category: moderationResult.category },
+                { status: 400 }
+            );
+        }
+
+        // 7. Check API Key
         if (!process.env.OPENROUTER_API_KEY) {
-            return NextResponse.json({ error: "Server Configuration Error: API Key Missing" }, { status: 500 });
+            return NextResponse.json(
+                { error: "Server Configuration Error: API Key Missing" },
+                { status: 500 }
+            );
+        }
+
+        // 8. Check Cache (optional optimization)
+        const cacheKey = createCacheKey(object, mode!, targetModel || 'auto');
+        let cachedResponse = null;
+
+        if (redisAvailable) {
+            try {
+                const cached = await redis.get(cacheKey);
+                if (cached && typeof cached === 'string') {
+                    cachedResponse = JSON.parse(cached);
+                    console.log(`[${requestId}] Cache hit for ${cacheKey}`);
+                }
+            } catch (e) {
+                // Cache miss or error, continue with fresh generation
+            }
+        }
+
+        if (cachedResponse) {
+            return NextResponse.json({
+                ...cachedResponse,
+                cached: true,
+                dbError: null
+            });
         }
 
         const openai = new OpenAI({
@@ -115,7 +246,7 @@ export async function POST(req: Request) {
             }
         });
 
-        // 5. Select Mode Logic (Separation of Concerns)
+        // 9. Select Mode Logic
         let systemPrompt = "";
         let randomStyle: any = {};
 
@@ -132,49 +263,44 @@ export async function POST(req: Request) {
                 break;
         }
 
-        // 6. Call AI
+        // 10. Call AI (with sanitized, escaped input)
+        const escapedObject = escapeForPrompt(object);
         const selectedModel = aiModel || CONFIG.AI.MODEL;
         let content = "";
+
         try {
             const completion = await openai.chat.completions.create({
                 model: selectedModel,
                 messages: [
                     { role: "system", content: systemPrompt },
-                    { role: "user", content: `Generate strictly for object: ${object}` }
+                    { role: "user", content: `Generate strictly for object: ${escapedObject}` }
                 ],
             });
             content = completion.choices[0].message.content || "";
         } catch (openaiError: any) {
-            return NextResponse.json({ error: `AI Generation Failed: ${openaiError.message}` }, { status: 500 });
+            console.error(`[${requestId}] AI Generation Failed:`, openaiError.message);
+            return NextResponse.json(
+                { error: `AI Generation Failed: ${openaiError.message}` },
+                { status: 500 }
+            );
         }
 
+        // 11. Parse AI Response
         let aiContent: any = { prompt: "Error generating", hook: "Error" };
         try {
-            // Robust JSON Extraction for AI models (handles thinking tags, markdown code blocks)
             let cleanContent = content;
-
-            // 1. Strip <think>...</think> tags (DeepSeek R1)
             cleanContent = cleanContent.replace(/<think>[\s\S]*?<\/think>/g, "");
-
-            // 2. Strip markdown code blocks (```json ... ``` or ``` ... ```)
             cleanContent = cleanContent.replace(/```(?:json)?\s*([\s\S]*?)```/g, "$1");
-
-            // 3. Trim whitespace
             cleanContent = cleanContent.trim();
 
-            // 4. Extract JSON object using regex (finds first { ... })
             const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
-
             if (jsonMatch) {
                 aiContent = JSON.parse(jsonMatch[0]);
             } else {
-                // Fallback: try parsing the whole cleaned string
                 aiContent = JSON.parse(cleanContent);
             }
         } catch (parseError: any) {
-            console.error("AI Parse Error:", parseError.message);
-            console.error("Raw AI Content:", content.substring(0, 500));
-            // Provide helpful fallback
+            console.error(`[${requestId}] AI Parse Error:`, parseError.message);
             aiContent = {
                 prompt: content,
                 hook: "Viral Content Generated",
@@ -189,8 +315,7 @@ export async function POST(req: Request) {
             };
         }
 
-        // 5. DUPLICATE CHECK
-        // If we generated the exact same prompt for this user, don't save it again.
+        // 12. Duplicate Check & Save
         let { data: existing } = await dbClient
             .from('generated_prompts')
             .select('id')
@@ -201,7 +326,6 @@ export async function POST(req: Request) {
         let saveError = null;
 
         if (!existing) {
-            // 6. SERVER-SIDE SAVE (using dbClient)
             const { data: insertedData, error } = await dbClient.from('generated_prompts').insert({
                 user_id: user.id,
                 prompt_text: aiContent.prompt,
@@ -219,20 +343,18 @@ export async function POST(req: Request) {
         }
 
         if (saveError) {
-            console.error("DB Save Error:", saveError);
+            console.error(`[${requestId}] DB Save Error:`, saveError);
         }
 
-        // 8. Return result
-        return NextResponse.json({
+        // 13. Build Response
+        const responseData = {
             id: existing?.id,
             prompt: aiContent.prompt,
-            category: randomStyle.category, // Assuming data.category is not available here, using randomStyle
-            platform: randomStyle.platform, // Assuming data.platform is not available here, using randomStyle
+            category: randomStyle.category,
+            platform: randomStyle.platform,
             viralHook: aiContent.hook,
-            mechanism: randomStyle.mechanism, // Assuming data.mechanism is not available here, using randomStyle
-            personNote: aiContent.personNote || (personDescription ? "Custom character included" : null), // Return personNote logic
-
-            // ✅ NEW FIELDS FOR VIRAL SHOCK FORMAT
+            mechanism: randomStyle.mechanism,
+            personNote: aiContent.personNote || (personDescription ? "Custom character included" : null),
             expectedViews: aiContent.expectedViews || "10M+ views",
             photoInstructions: aiContent.photoInstructions || "Upload photo to Kling/Runway first.",
             difficulty: aiContent.difficulty || "Medium",
@@ -241,14 +363,26 @@ export async function POST(req: Request) {
             successRate: aiContent.successRate || "High",
             commonIssues: aiContent.commonIssues || "None",
             platformSpecific: aiContent.platformSpecific || {},
+        };
 
+        // 14. Cache successful response
+        if (redisAvailable && !saveError) {
+            try {
+                await redis.setex(cacheKey, CONFIG.CACHE.TTL_SECONDS, JSON.stringify(responseData));
+            } catch (e) {
+                // Cache write failure is non-fatal
+            }
+        }
+
+        return NextResponse.json({
+            ...responseData,
+            cached: false,
             dbError: saveError ? saveError.message : null
         });
 
     } catch (error: any) {
-        console.error("Unhandled API Error:", error);
+        console.error(`[${requestId}] Unhandled API Error:`, error);
 
-        // Provide specific error messages based on error type
         let errorMessage = "An unexpected error occurred.";
         let statusCode = 500;
 
@@ -264,7 +398,7 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json(
-            { error: errorMessage, debug: process.env.NODE_ENV === 'development' ? error.message : undefined },
+            { error: errorMessage, requestId, debug: process.env.NODE_ENV === 'development' ? error.message : undefined },
             { status: statusCode }
         );
     }
