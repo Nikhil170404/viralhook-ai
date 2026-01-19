@@ -120,14 +120,26 @@ export default function LibraryPage() {
 
         // Increment Analytics
         if (isCommunity) {
+            // 1. Optimistic Update (Immediate "Real Time" Feedback)
+            setDbPrompts(prev => prev.map(p =>
+                p.id === id ? { ...p, copyCount: (p.copyCount || 0) + 1 } : p
+            ));
+
             try {
-                await supabase.rpc('increment_copy_count', { row_id: id });
-                // Optimistic update
-                setDbPrompts(prev => prev.map(p =>
-                    p.id === id ? { ...p, copyCount: (p.copyCount || 0) + 1 } : p
-                ));
+                const { data: success } = await supabase.rpc('increment_copy_count', { row_id: id });
+
+                // 2. Rollback if failed (User already copied)
+                if (success === false) {
+                    setDbPrompts(prev => prev.map(p =>
+                        p.id === id ? { ...p, copyCount: (p.copyCount || 0) - 1 } : p
+                    ));
+                }
             } catch (e) {
                 console.error("Copy analytics failed", e);
+                // Rollback on error
+                setDbPrompts(prev => prev.map(p =>
+                    p.id === id ? { ...p, copyCount: (p.copyCount || 0) - 1 } : p
+                ));
             }
         }
     };

@@ -130,8 +130,8 @@ export default function LandingPage() {
             </h1>
 
             <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
-              Stop guessing. Generate professional-grade AI video prompts optimized for
-              <span className="text-white"> Kling, Luma, Veo, and Runway</span>. Built for creators who demand millions of views.
+              Turn any script into a <span className="text-white">high-retention video hook</span>. Generate professional-grade AI prompts optimized for
+              <span className="text-white"> Kling, Luma, Veo, and Runway</span>.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -350,8 +350,8 @@ export default function LandingPage() {
                 bg: "bg-green-500/10"
               },
               {
-                title: "Viral Hooks",
-                desc: "Pre-loaded with 100+ high-retention hooks that keep viewers watching.",
+                title: "Script Retention Engine",
+                desc: "Convert any script into a retention-optimized video prompt automatically.",
                 icon: TrendingUp,
                 color: "text-cyan-500",
                 bg: "bg-cyan-500/10"
