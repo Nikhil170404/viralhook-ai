@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ErrorBoundaryWrapper } from "./error-boundary-wrapper";
+import { ErrorBoundaryWrapper } from "@/app/error-boundary-wrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
