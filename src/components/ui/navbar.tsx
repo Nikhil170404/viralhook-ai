@@ -46,10 +46,13 @@ export function Navbar() {
                     <span className="text-lg md:text-xl font-black tracking-tighter">VIRALHOOK<span className="text-pink-500">.AI</span></span>
                 </Link>
 
-                <div className="hidden lg:flex items-center gap-8 text-sm font-medium text-gray-400">
-                    <Link href="/#features" className="hover:text-white transition-colors">Features</Link>
-                    <Link href="/#modes" className="hover:text-white transition-colors">Modes</Link>
-                </div>
+                {/* Show Features/Modes only when NOT logged in */}
+                {!session && (
+                    <div className="hidden lg:flex items-center gap-8 text-sm font-medium text-gray-400">
+                        <Link href="/#features" className="hover:text-white transition-colors">Features</Link>
+                        <Link href="/#modes" className="hover:text-white transition-colors">Modes</Link>
+                    </div>
+                )}
 
                 <div className="flex items-center gap-2 md:gap-4">
                     {session ? (
