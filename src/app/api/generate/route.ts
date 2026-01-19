@@ -8,6 +8,7 @@ import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import { redis } from '@/lib/redis';
 import { logger, createRequestLogger } from '@/lib/logger';
+import { checkUserRateLimit, incrementUserUsageDB } from '@/lib/rate-limit';
 
 import { validateAndSanitizeInputs, escapeForPrompt } from '@/lib/security/sanitize';
 import { moderateAllInputs } from '@/lib/security/content-filter';
@@ -114,9 +115,7 @@ export async function POST(req: Request) {
             );
         }
 
-        // We can't easily re-assign context to 'log', but we can just use log as is, 
-        // OR rely on logger middleware (future). 
-        // For now, simple logging is better than no logging.
+        if (user) log.child({ userId: user.id });
 
         const rateLimitKey = `rate_limit:${user.id}`;
         let currentCount = 0;
@@ -156,6 +155,15 @@ export async function POST(req: Request) {
                         'X-RateLimit-Reset': String(ttl)
                     }
                 }
+            );
+        }
+
+        // Daily Quota Check
+        const quota = await checkUserRateLimit(user.id, 'free');
+        if (!quota.allowed) {
+            return NextResponse.json(
+                { error: "Daily quota exceeded. Upgrade to Pro for unlimited prompts." },
+                { status: 429 }
             );
         }
 
@@ -331,6 +339,9 @@ export async function POST(req: Request) {
 
         if (saveError) {
             log.error(`DB Save Error:`, saveError);
+        } else if (existing) {
+            // Sync usage stats to DB (Fire and forget)
+            incrementUserUsageDB(user.id, dbClient);
         }
 
         const responseData = {
@@ -365,7 +376,6 @@ export async function POST(req: Request) {
         });
 
     } catch (error: any) {
-        // Use global logger for safety in catch block
         logger.error(`[${requestId}] Unhandled API Error: ${error.message}`, error);
 
         let errorMessage = "An unexpected error occurred.";

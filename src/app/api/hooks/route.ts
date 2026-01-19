@@ -7,6 +7,7 @@ import { getHooksPrompt, parseHooksResponse } from '@/lib/ai/modes/hooks';
 import { sanitizeInput } from '@/lib/security/sanitize';
 import { moderateContent } from '@/lib/security/content-filter';
 import { logger, createRequestLogger } from '@/lib/logger';
+import { checkUserRateLimit, incrementUserUsageDB } from '@/lib/rate-limit';
 
 // --- CONFIGURATION ---
 const CONFIG = {
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
 
         if (user) log.child({ userId: user.id });
 
-        // 2. Rate Limiting
+        // 2. Rate Limiting (Burst)
         const rateLimitKey = `hooks_limit:${user.id}`;
         try {
             const count = await redis.incr(rateLimitKey);
@@ -88,6 +89,15 @@ export async function POST(req: Request) {
             if (!memCheck.allowed) {
                 return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
             }
+        }
+
+        // Daily Quota Check
+        const quota = await checkUserRateLimit(user.id, 'free');
+        if (!quota.allowed) {
+            return NextResponse.json(
+                { error: "Daily quota exceeded. Upgrade to Pro for unlimited prompts." },
+                { status: 429 }
+            );
         }
 
         // 3. Parse Request
@@ -190,6 +200,8 @@ export async function POST(req: Request) {
 
             if (!insertError && insertedData) {
                 savedId = insertedData.id;
+                // Add DB Usage Sync
+                incrementUserUsageDB(user.id, supabase);
             } else {
                 log.error(`Failed to save hook:`, insertError as any);
             }
