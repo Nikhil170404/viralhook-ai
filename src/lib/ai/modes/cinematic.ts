@@ -5,14 +5,15 @@ import {
     getVeoInstructions,
     getCameraMovements,
     getLightingSetups,
-    apply90sVintage
+    apply90sVintage,
+    enhancePersonDescription
 } from '../helpers';
 
 /**
  * CINEMATIC MODE - Photo + Beautiful Scene
  * User's face becomes the MAIN CHARACTER in a cinematic moment
  */
-export function getCinematicPrompt(object: string, targetModel?: string) {
+export function getCinematicPrompt(object: string, targetModel?: string, personDescription?: string) {
 
     // Select Platform Instructions
     let platformInstructions = "";
@@ -25,11 +26,21 @@ export function getCinematicPrompt(object: string, targetModel?: string) {
     const cameraMoves = getCameraMovements();
     const lightSetups = getLightingSetups();
 
+    // 🆕 PERSON INTEGRATION LOGIC
+    let subjectDescription = "A person";
+
+    if (personDescription) {
+        // Clean and enhance the description
+        subjectDescription = enhancePersonDescription(personDescription);
+    }
+
     const cinematicScenarios = [
         {
             category: "Main Character Moment",
-            photoPlacement: `Single ${object} centered in frame, confident expression, slight wind movement.`,
-            cinematicAction: `Slow motion, dramatic lighting change from dark to golden hour, anamorphic lens flares hitting the ${object}.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} centered in frame, confident expression, slight wind movement.`
+                : `Single ${object} centered in frame, confident expression, slight wind movement.`,
+            cinematicAction: `Slow motion, dramatic lighting change from dark to golden hour, anamorphic lens flares hitting the subject.`,
             cameraWork: "Slow dolly push-in, shallow depth of field, background bokeh",
             mood: "Heroic, empowering, 'that's the moment they became the protagonist'",
             platform: "Veo 3 (Photorealism), Runway Gen-4",
@@ -43,8 +54,10 @@ export function getCinematicPrompt(object: string, targetModel?: string) {
         },
         {
             category: "South Indian Mass Entry",
-            photoPlacement: `The ${object} standing in silhouette against a massive dust storm, back turned then slowly turning.`,
-            cinematicAction: `Dust and smoke billow around the ${object}, strong rim lighting creates a golden halo. Debris floats in slow motion.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} standing in silhouette against a massive dust storm, back turned then slowly turning.`
+                : `The ${object} standing in silhouette against a massive dust storm, back turned then slowly turning.`,
+            cinematicAction: `Dust and smoke billow around the subject, strong rim lighting creates a golden halo. Debris floats in slow motion.`,
             cameraWork: "Low angle 'Hero Shot', rapid zoom-in (crash zoom), slow motion walk",
             mood: "Hype, powerful, mass appeal, larger than life",
             platform: "Kling (Motion control), Runway",
@@ -58,7 +71,9 @@ export function getCinematicPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Royal Rajasthani Aesthetic",
-            photoPlacement: `The ${object} framed by an intricate sandstone Jharokha (archway), bathed in golden light.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} framed by an intricate sandstone Jharokha (archway), bathed in golden light.`
+                : `The ${object} framed by an intricate sandstone Jharokha (archway), bathed in golden light.`,
             cinematicAction: `Soft curtains blowing in the wind, pigeons flying in background, sun rays (god rays) filtering through the arch.`,
             cameraWork: "Smooth gimbal tracking shot through the archway, revealing the subject",
             mood: "Regal, timeless, traditional elegance",
@@ -73,7 +88,9 @@ export function getCinematicPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Bollywood Romance",
-            photoPlacement: `The ${object} in a vast mustard field, traditional vibe, looking into distance.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} in a vast mustard field, traditional vibe, looking into distance.`
+                : `The ${object} in a vast mustard field, traditional vibe, looking into distance.`,
             cinematicAction: "360-degree orbit camera, rose petals falling, warm 90s golden glow.",
             cameraWork: "Crane up revealing vast landscape, Pro-Mist diffusion filter",
             mood: "Romantic, nostalgic, 90s Bollywood vibes",
@@ -88,8 +105,10 @@ export function getCinematicPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Anime Protagonist",
-            photoPlacement: `The ${object} in a dramatic pose, hair flowing against gravity, intense stare.`,
-            cinematicAction: "Energy particle effects swirl around the ${object}, glowing aura expands, lightning strikes background.",
+            photoPlacement: personDescription
+                ? `${subjectDescription} in a dramatic pose, hair flowing against gravity, intense stare.`
+                : `The ${object} in a dramatic pose, hair flowing against gravity, intense stare.`,
+            cinematicAction: "Energy particle effects swirl around the subject, glowing aura expands, lightning strikes background.",
             cameraWork: "Low angle hero shot, Dutch angle, dramatic sky",
             mood: "Power-up moment, transformation scene",
             platform: "Runway Gen-4 (Effects), Luma",
@@ -103,8 +122,10 @@ export function getCinematicPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Cyberpunk Edge",
-            photoPlacement: `The ${object} in a neon city alley at night, rain reflection on surface.`,
-            cinematicAction: "Neon lights flicker on the ${object}, holographic signs glitch in background, steam rises.",
+            photoPlacement: personDescription
+                ? `${subjectDescription} in a neon city alley at night, rain reflection on surface.`
+                : `The ${object} in a neon city alley at night, rain reflection on surface.`,
+            cinematicAction: "Neon lights flicker on the subject, holographic signs glitch in background, steam rises.",
             cameraWork: "Tracking shot from side, wet pavement reflections, anamorphic flares",
             mood: "Edgy, futuristic, high-tech, cool",
             platform: "Kling AI, Runway Gen-3",
@@ -118,8 +139,10 @@ export function getCinematicPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Fashion Editorial",
-            photoPlacement: `The ${object} in a high-fashion pose, clean background, fierce energy.`,
-            cinematicAction: "Strobe light flashes rapidly, confetti explosion, wind machine effect on ${object}.",
+            photoPlacement: personDescription
+                ? `${subjectDescription} in a high-fashion pose, clean background, fierce energy.`
+                : `The ${object} in a high-fashion pose, clean background, fierce energy.`,
+            cinematicAction: "Strobe light flashes rapidly, confetti explosion, wind machine effect on subject.",
             cameraWork: "Rapid zoom in and out, Dutch angles, dynamic rotation",
             mood: "Confident, powerful, runway energy",
             platform: "Runway Gen-4, Kling",
@@ -133,8 +156,10 @@ export function getCinematicPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Dream Sequence",
-            photoPlacement: `The ${object} floating in a surreal cloudscape, peaceful atmosphere.`,
-            cinematicAction: "Clouds moving fast in background, ${object} levitating slightly, soft ethereal glow.",
+            photoPlacement: personDescription
+                ? `${subjectDescription} floating in a surreal cloudscape, peaceful atmosphere.`
+                : `The ${object} floating in a surreal cloudscape, peaceful atmosphere.`,
+            cinematicAction: "Clouds moving fast in background, subject levitating slightly, soft ethereal glow.",
             cameraWork: "Top-down spinning shot, slow motion, smooth camera",
             mood: "Surreal, peaceful, magical",
             platform: "Luma Dream Machine",
@@ -157,6 +182,7 @@ export function getCinematicPrompt(object: string, targetModel?: string) {
     const systemPrompt = `You are a HOLLYWOOD CINEMATOGRAPHER creating a viral cinematic video.
 
 **INPUT SUBJECT**: "${object}"
+${personDescription ? `**PERSON IN SCENE**: ${subjectDescription}` : ''}
 
 **CINEMATIC STYLE**: ${randomScene.category}
 **MOOD**: ${randomScene.mood}
@@ -179,7 +205,7 @@ ${randomScene.photoPlacement}
 
 **Step 2 - Cinematic Action**:
 ${randomScene.cinematicAction}
-(Ensure the action interacts with the "${object}" naturally)
+(Ensure the action interacts with the ${personDescription ? "person" : "object"} naturally)
 
 **Step 3 - Camera Work**:
 ${randomScene.cameraWork}
@@ -199,7 +225,7 @@ ${randomScene.cameraWork}
 }
 
 **RULES**:
-1. Make the "${object}" look AMAZING - this is about beauty, not shock.
+1. ${personDescription ? `The person MUST match this description: ${subjectDescription}` : `Make the "${object}" look AMAZING - this is about beauty, not shock.`}
 2. Use professional cinematography techniques.
 3. Duration: 5-8 seconds.
 4. Focus on: lighting, camera movement, atmosphere.
@@ -211,6 +237,7 @@ ${negPrompt ? `Avoid: ${negPrompt}` : ''}
 {
   "prompt": "[Complete cinematic prompt covering placement, action, and camera work]",
   "hook": "${randomScene.viralHook}",
+  "personNote": "${personDescription ? 'Custom character included' : 'Generic character'}",
   "photoInstructions": "Upload photo of ${object} -> Place in center -> Apply 'Cinematic' style -> Use 'Medium' motion bucket",
   "expectedViews": "${randomScene.expectedViews}",
   "difficulty": "${randomScene.difficulty}",

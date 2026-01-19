@@ -90,7 +90,7 @@ export default function Home() {
           <div className="w-full">
             <AIInputWithLoading
               placeholder="e.g. A Nike Shoe, A Slice of Pizza..."
-              onSubmit={async (val, mode, targetModel, aiModel) => {
+              onSubmit={async (val, mode, targetModel, aiModel, personDescription) => {
                 setUserObject(val);
 
                 // Call the new API
@@ -102,7 +102,13 @@ export default function Home() {
                       'Content-Type': 'application/json',
                       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
-                    body: JSON.stringify({ object: val, mode: mode, targetModel: targetModel, aiModel: aiModel })
+                    body: JSON.stringify({
+                      object: val,
+                      mode: mode,
+                      targetModel: targetModel,
+                      aiModel: aiModel,
+                      personDescription: personDescription
+                    })
                   });
 
                   const data = await response.json();
@@ -112,7 +118,8 @@ export default function Home() {
                     category: data.category || "Viral Hit",
                     template: data.prompt,
                     platform: data.platform || "AI Video",
-                    viralHook: data.viralHook
+                    viralHook: data.viralHook,
+                    personNote: data.personNote // Capture the person note
                   });
 
                   setGeneratedResult(data.prompt);
@@ -154,6 +161,23 @@ export default function Home() {
                       </span>
                     )}
                   </div>
+
+                  {/* Custom Character Badge */}
+                  {selectedPrompt?.personNote && (
+                    <div className="mb-4 bg-purple-900/20 rounded-xl p-3 border border-purple-500/20">
+                      <div className="flex items-center gap-2 mb-1">
+                        {/* We need User icon here, but it's not imported. Use fallback or add import */}
+                        <span className="text-purple-400">👤</span>
+                        <p className="text-xs text-purple-300 uppercase font-bold tracking-wide">
+                          Custom Character
+                        </p>
+                      </div>
+                      <p className="text-sm text-gray-300">
+                        This prompt includes your custom character description.
+                        The AI will generate a person matching your description.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Viral Hook Badge */}
                   {selectedPrompt?.viralHook && (
@@ -205,8 +229,8 @@ export default function Home() {
                             setTimeout(() => setIsShareCopied(false), 2000);
                           }}
                           className={`px-5 py-2.5 rounded-xl font-bold text-sm border transition-all flex items-center gap-2 ${isShareCopied
-                              ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                              : 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20'
+                            ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                            : 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20'
                             }`}
                         >
                           {isShareCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}

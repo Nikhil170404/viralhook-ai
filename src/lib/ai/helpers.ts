@@ -541,3 +541,21 @@ export const getPlatformComparison = () => `
 - **Veo**: Photorealism, audio-critical, broadcast quality
 - **Luma**: Fluid dynamics, dreamy aesthetics, quick turnaround
 `;
+
+// ===== PERSON DESCRIPTION HELPER =====
+
+export const enhancePersonDescription = (input: string): string => {
+    if (!input) return "";
+    const trimmed = input.trim();
+    if (!trimmed) return "";
+
+    // If it already sounds like a full description, leave it
+    if (trimmed.toLowerCase().startsWith("a ") ||
+        trimmed.toLowerCase().startsWith("an ") ||
+        trimmed.toLowerCase().startsWith("the ")) {
+        return trimmed;
+    }
+
+    // Otherwise prefix to make it gramatically correct for the prompt
+    return `a person who is ${trimmed}`;
+};

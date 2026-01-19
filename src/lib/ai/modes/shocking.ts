@@ -3,7 +3,8 @@ import {
     getKlingInstructions,
     getRunwayInstructions,
     getVeoInstructions,
-    getPhysicsKeywords
+    getPhysicsKeywords,
+    enhancePersonDescription
 } from '../helpers';
 
 /**
@@ -11,7 +12,7 @@ import {
  * User describes their photo → AI generates "what happens to them"
  * No photo upload needed - they manually add it in Kling/Runway
  */
-export function getShockingPrompt(object: string, targetModel?: string) {
+export function getShockingPrompt(object: string, targetModel?: string, personDescription?: string) {
 
     // Select Platform Instructions
     let platformInstructions = "";
@@ -20,13 +21,23 @@ export function getShockingPrompt(object: string, targetModel?: string) {
     else if (targetModel?.toLowerCase().includes("veo")) platformInstructions = getVeoInstructions();
     else platformInstructions = getKlingInstructions() + "\n" + getRunwayInstructions();
 
+    // 🆕 PERSON INTEGRATION LOGIC
+    let subjectDescription = "A person";
+
+    if (personDescription) {
+        // Clean and enhance the description
+        subjectDescription = enhancePersonDescription(personDescription);
+    }
+
     // ✅ 2026 LATEST VIRAL SHOCK FORMATS
     // Refactored to integrate "object" into descriptions dynamically
     const viralShockScenarios = [
         {
             category: "Amusement Park Free Fall",
-            photoPlacement: `Single ${object} positioned center frame, looking calm/casual.`,
-            shockAction: `A massive free-fall amusement park ride suddenly descends rapidly from above, directly behind the ${object}.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} positioned center frame, looking calm/casual.`
+                : `Single ${object} positioned center frame, looking calm/casual.`,
+            shockAction: `A massive free-fall amusement park ride suddenly descends rapidly from above, directly behind the subject.`,
             cameraWork: "Static front-facing shot, sudden zoom out reveals ride approaching",
             timing: "0-2s: Subject static → 2-3s: Zoom out reveals ride → 3-4s: IMPACT from above → Video cuts",
             physicsDetails: "Ride shadow grows larger, wind blows upward, subject looks up last second",
@@ -40,8 +51,10 @@ export function getShockingPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Car Drift Behind Back",
-            photoPlacement: `Single ${object} standing on an empty street, unaware of surroundings.`,
-            shockAction: `A sports car drifts sideways behind the ${object}, tires smoking, inches from impact.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} standing on an empty street, unaware of surroundings.`
+                : `Single ${object} standing on an empty street, unaware of surroundings.`,
+            shockAction: `A sports car drifts sideways behind the subject, tires smoking, inches from impact.`,
             cameraWork: "Front angle locked on subject, car enters frame from side blurred then sharp",
             timing: "0-2s: Subject posing → 2-3s: Engine sound builds → 3-4s: Drift car slides behind → Cut at closest point",
             physicsDetails: "Tire smoke fills background, wind from car blows clothes/hair, slight reaction at end",
@@ -55,8 +68,10 @@ export function getShockingPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Lightning Strike Miss",
-            photoPlacement: `Single ${object} outdoors, normal lighting, calm atmosphere.`,
-            shockAction: `A massive lightning bolt strikes the ground 2 feet beside the ${object}, creating a blinding flash.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} outdoors, normal lighting, calm atmosphere.`
+                : `Single ${object} outdoors, normal lighting, calm atmosphere.`,
+            shockAction: `A massive lightning bolt strikes the ground 2 feet beside the subject, creating a blinding flash.`,
             cameraWork: "Static medium shot, sudden white flash fills 80% of frame, camera shake",
             timing: "0-2s: Overcast sky, calm → 2s: Thunder rumble → 3s: LIGHTNING STRIKE → 4s: Smoke clears, subject shocked",
             physicsDetails: "Ground explosion, dirt particles, electrical sparks, hair/fur stands up from static",
@@ -70,7 +85,9 @@ export function getShockingPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Plane Engine Explodes",
-            photoPlacement: `Single ${object} near a window (implied plane interior), neutral expression.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} near a window (implied plane interior), neutral expression.`
+                : `Single ${object} near a window (implied plane interior), neutral expression.`,
             shockAction: `The plane engine visible outside the window explodes into an orange fireball, sending debris flying.`,
             cameraWork: "Interior close-up on subject, window view shows engine, sudden explosion reflection on subject",
             timing: "0-2s: Cruising altitude, calm → 2s: Engine sputters → 3s: MASSIVE EXPLOSION → 4s: Flames visible",
@@ -85,8 +102,10 @@ export function getShockingPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Elevator Cable Snap",
-            photoPlacement: `Single ${object} inside a glass elevator, casual stance.`,
-            shockAction: `The elevator cable snaps, causing a 3-second free fall where the ${object} floats upward.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} inside a glass elevator, casual stance.`
+                : `Single ${object} inside a glass elevator, casual stance.`,
+            shockAction: `The elevator cable snaps, causing a 3-second free fall where the subject floats upward.`,
             cameraWork: "Interior shot, subject center frame, camera follows fall motion, ceiling rushes down",
             timing: "0-2s: Normal ride → 2s: Cable snap sound → 3-4s: FREE FALL, subject floats → 5s: Emergency brake",
             physicsDetails: "Zero gravity effect, hair/loose items float up, G-force distortion on face",
@@ -100,8 +119,10 @@ export function getShockingPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Truck Tire Blowout",
-            photoPlacement: `Single ${object} on a sidewalk, side profile, normal environment.`,
-            shockAction: `An 18-wheeler truck tire explodes beside the ${object} on the road, with rubber shrapnel flying.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} on a sidewalk, side profile, normal environment.`
+                : `Single ${object} on a sidewalk, side profile, normal environment.`,
+            shockAction: `An 18-wheeler truck tire explodes beside the subject on the road, with rubber shrapnel flying.`,
             cameraWork: "Side tracking shot following subject, truck in background, sudden explosion and debris",
             timing: "0-2s: Calm → 2-3s: Tire pressure builds → 3-4s: EXPLOSION, subject flinches → 5s: Debris raining",
             physicsDetails: "Tire rubber chunks fly past, smoke burst, subject flinches and covers up, car alarms trigger",
@@ -115,8 +136,10 @@ export function getShockingPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Chandelier Drop",
-            photoPlacement: `Single ${object} indoors (restaurant/hall), looking down or away.`,
-            shockAction: `A massive crystal chandelier falls from the ceiling directly above the ${object}, stopping 1 foot from impact.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} indoors (restaurant/hall), looking down or away.`
+                : `Single ${object} indoors (restaurant/hall), looking down or away.`,
+            shockAction: `A massive crystal chandelier falls from the ceiling directly above the subject, stopping 1 foot from impact.`,
             cameraWork: "Top-down angle showing chandelier, then cut to side angle as it falls",
             timing: "0-2s: Calm scene → 2s: Ceiling crack sound → 3-4s: Chandelier plummets → 4s: Stops mid-air, chain catches",
             physicsDetails: "Glass crystals shatter and scatter, table shakes from impact shockwave, objects tip over",
@@ -130,8 +153,10 @@ export function getShockingPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Balcony Railing Breaks",
-            photoPlacement: `Single ${object} leaning on a high-rise balcony railing, looking at view.`,
-            shockAction: `The railing suddenly snaps, the ${object} starts falling forward but grabs the ledge last second.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} leaning on a high-rise balcony railing, looking at view.`
+                : `Single ${object} leaning on a high-rise balcony railing, looking at view.`,
+            shockAction: `The railing suddenly snaps, the subject starts falling forward but grabs the ledge last second.`,
             cameraWork: "Behind subject, railing in frame, sudden tilt as railing breaks, camera follows fall motion",
             timing: "0-2s: Leaning calmly → 2s: Metal creak sound → 3s: Railing BREAKS → 4s: Subject catches ledge, hanging",
             physicsDetails: "Railing bolts pop out, subject's weight shifts forward, legs dangle over edge, realistic fear",
@@ -145,8 +170,10 @@ export function getShockingPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Gas Station Fire Start",
-            photoPlacement: `Single ${object} near a gas pump, standing normally.`,
-            shockAction: `The gas pump nozzle sparks, igniting fuel on the ground, flames race toward the ${object}.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} near a gas pump, standing normally.`
+                : `Single ${object} near a gas pump, standing normally.`,
+            shockAction: `The gas pump nozzle sparks, igniting fuel on the ground, flames race toward the subject.`,
             cameraWork: "Security camera angle, wide shot showing subject and pumps, sudden orange glow spreads",
             timing: "0-2s: Normal scene → 2s: Spark ignition → 3-4s: Flames spread rapidly → 4s: Subject reacts/retreats",
             physicsDetails: "Ground fire spreads in realistic pattern, subject drops items/stumbles back",
@@ -160,8 +187,10 @@ export function getShockingPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Subway Train Near Miss",
-            photoPlacement: `Single ${object} on subway platform edge, distracted.`,
-            shockAction: `An express train barrels past at 100mph, wind blows the ${object} backward inches from the face.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} on subway platform edge, distracted.`
+                : `Single ${object} on subway platform edge, distracted.`,
+            shockAction: `An express train barrels past at 100mph, wind blows the subject backward inches from the face.`,
             cameraWork: "Platform-level shot, subject in foreground, train enters frame at extreme speed with motion blur",
             timing: "0-2s: Waiting → 2-3s: Rumble intensifies → 3-4s: Train BLASTS past → 4s: Subject stumbles back",
             physicsDetails: "Wind tunnel effect, clothes/paper whip violently, subject covers face",
@@ -175,8 +204,10 @@ export function getShockingPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Basketball Hoop Collapse",
-            photoPlacement: `Single ${object} under a basketball hoop.`,
-            shockAction: `The entire basketball hoop structure collapses forward, backboard falling toward the ${object}.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} under a basketball hoop.`
+                : `Single ${object} under a basketball hoop.`,
+            shockAction: `The entire basketball hoop structure collapses forward, backboard falling toward the subject.`,
             cameraWork: "Side angle showing subject and hoop, sudden tilt as structure falls, subject dives",
             timing: "0-2s: Normal scene → 2s: Metal groan → 3s: Hoop tilts forward → 4s: CRASH, subject rolls away",
             physicsDetails: "Bolts snap, concrete base cracks, backboard glass shatters on impact, dust cloud",
@@ -190,8 +221,10 @@ export function getShockingPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Firework Malfunction",
-            photoPlacement: `Single ${object} near a firework setup, lighting a fuse.`,
-            shockAction: `The firework ignites early, shooting sideways at face level, exploding near the ${object}.`,
+            photoPlacement: personDescription
+                ? `${subjectDescription} near a firework setup, lighting a fuse.`
+                : `Single ${object} near a firework setup, lighting a fuse.`,
+            shockAction: `The firework ignites early, shooting sideways at face level, exploding near the subject.`,
             cameraWork: "Ground-level shot, subject in focus, firework in foreground, sudden bright flash",
             timing: "0-2s: Lighting fuse → 2s: Fuse burns fast → 3s: EARLY IGNITION → 4s: Sparks fly, subject falls back",
             physicsDetails: "Bright magnesium flash, colored sparks spray, smoke trail, bright illumination on subject",
@@ -231,6 +264,8 @@ export function getShockingPrompt(object: string, targetModel?: string) {
     const systemPrompt = `You are a VIRAL VIDEO PROMPT ENGINEER for Kling/Runway AI.
 
 **INPUT SUBJECT**: "${object}"
+${personDescription ? `**PERSON IN SCENE**: ${subjectDescription}` : ''}
+
 **VIRAL FORMAT**: ${randomScenario.category}
 **EXPECTED VIEWS**: ${randomScenario.viewsRange}
 
@@ -283,6 +318,7 @@ ${randomScenario.physicsDetails}
 5. Use REALISTIC physics - this should look like it COULD happen
 6. Camera angle: CCTV, dashcam, security footage, or handheld panic
 7. Total duration: 5-6 seconds MAX
+8. ${personDescription ? `The person MUST match this description: ${subjectDescription}` : ''}
 
 ${negPrompt ? `Avoid: ${negPrompt}` : ''}
 
@@ -290,6 +326,7 @@ ${negPrompt ? `Avoid: ${negPrompt}` : ''}
 {
   "prompt": "[Detailed prompt incorporating all steps and strict rules above]",
   "hook": "${randomHook}",
+  "personNote": "${personDescription ? 'Custom character included' : 'Generic character'}",
   "photoInstructions": "In Kling: Upload photo of ${object} → Select 'Image to Video' → Place in center → Apply 'Static Brush' on subject → Apply 'Motion Brush' on background hazard → Set duration 5s",
   "expectedViews": "${randomScenario.viewsRange}",
   "difficulty": "${randomScenario.difficulty}",

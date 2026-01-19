@@ -392,10 +392,9 @@ export default function LandingPage() {
             </div>
             <div className="flex flex-col gap-4">
               <span className="text-white">Community</span>
-              <a href="#" className="hover:text-white transition-colors text-gray-500">Discord</a>
-              <a href="#" className="hover:text-white transition-colors text-gray-500">Twitter</a>
-              <a href="#" className="hover:text-white transition-colors text-gray-500">YouTube</a>
+              <a href="#" className="hover:text-white transition-colors text-gray-500">Instagram</a>
             </div>
+            {/* Hidden form connection for future use */}
           </div>
         </div>
 

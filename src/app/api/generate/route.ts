@@ -14,6 +14,7 @@ interface GenerateRequest {
     mode?: 'chaos' | 'cinematic' | 'shocking';
     targetModel?: string; // Video model (Kling, Luma, etc.)
     aiModel?: string;     // Intelligence engine (DeepSeek, Xiaomi, etc.)
+    personDescription?: string; // NEW: Custom person description
 }
 
 // --- CONFIGURATION CONSTANTS ---
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
         }
 
         // 4. Parse Request
-        const { object, mode = 'chaos', targetModel, aiModel }: GenerateRequest = await req.json();
+        const { object, mode = 'chaos', targetModel, aiModel, personDescription }: GenerateRequest = await req.json();
 
         if (!process.env.OPENROUTER_API_KEY) {
             return NextResponse.json({ error: "Server Configuration Error: API Key Missing" }, { status: 500 });
@@ -120,14 +121,14 @@ export async function POST(req: Request) {
 
         switch (mode) {
             case 'cinematic':
-                ({ systemPrompt, randomStyle } = getCinematicPrompt(object, targetModel));
+                ({ systemPrompt, randomStyle } = getCinematicPrompt(object, targetModel, personDescription));
                 break;
             case 'shocking':
-                ({ systemPrompt, randomStyle } = getShockingPrompt(object, targetModel));
+                ({ systemPrompt, randomStyle } = getShockingPrompt(object, targetModel, personDescription));
                 break;
             case 'chaos':
             default:
-                ({ systemPrompt, randomStyle } = getChaosPrompt(object, targetModel));
+                ({ systemPrompt, randomStyle } = getChaosPrompt(object, targetModel, personDescription));
                 break;
         }
 
@@ -221,9 +222,6 @@ export async function POST(req: Request) {
             console.error("DB Save Error:", saveError);
         }
 
-        // 7. Save to database (optional, non-blocking)
-
-
         // 8. Return result
         return NextResponse.json({
             id: existing?.id,
@@ -232,6 +230,7 @@ export async function POST(req: Request) {
             platform: randomStyle.platform, // Assuming data.platform is not available here, using randomStyle
             viralHook: aiContent.hook,
             mechanism: randomStyle.mechanism, // Assuming data.mechanism is not available here, using randomStyle
+            personNote: aiContent.personNote || (personDescription ? "Custom character included" : null), // Return personNote logic
 
             // ✅ NEW FIELDS FOR VIRAL SHOCK FORMAT
             expectedViews: aiContent.expectedViews || "10M+ views",

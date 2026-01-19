@@ -1,6 +1,6 @@
 "use client";
 
-import { CornerRightUp, Zap, Clapperboard, ChevronDown, Check, Sparkles, Video, Film, Camera, Cpu, Target, Layers } from "lucide-react";
+import { CornerRightUp, Zap, Clapperboard, ChevronDown, Check, Sparkles, Video, Film, Camera, Cpu, Target, Layers, User } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,7 @@ interface AIInputWithLoadingProps {
     maxHeight?: number;
     loadingDuration?: number;
     thinkingDuration?: number;
-    onSubmit?: (value: string, mode: 'chaos' | 'cinematic' | 'shocking', targetModel: string, aiModel: string) => void | Promise<void>;
+    onSubmit?: (value: string, mode: 'chaos' | 'cinematic' | 'shocking', targetModel: string, aiModel: string, personDescription?: string) => void | Promise<void>;
     className?: string;
     autoAnimate?: boolean;
 }
@@ -47,6 +47,8 @@ export function AIInputWithLoading({
     autoAnimate = false
 }: AIInputWithLoadingProps) {
     const [inputValue, setInputValue] = useState("");
+    const [personDescription, setPersonDescription] = useState("");
+    const [showPersonInput, setShowPersonInput] = useState(false);
     const [submitted, setSubmitted] = useState(autoAnimate);
     const [isAnimating, setIsAnimating] = useState(autoAnimate);
     const [mode, setMode] = useState<'chaos' | 'cinematic' | 'shocking'>('chaos');
@@ -98,8 +100,10 @@ export function AIInputWithLoading({
         if (!inputValue.trim() || submitted) return;
 
         setSubmitted(true);
-        await onSubmit?.(inputValue, mode, targetModel, aiModel);
+        await onSubmit?.(inputValue, mode, targetModel, aiModel, personDescription || undefined);
         setInputValue("");
+        setPersonDescription("");
+        setShowPersonInput(false);
         adjustHeight(true);
 
         setTimeout(() => {
@@ -322,8 +326,54 @@ export function AIInputWithLoading({
                         )}
                     </button>
                 </div>
+
+                {/* 🆕 PERSON DESCRIPTION TOGGLE */}
+                <div className="w-full max-w-xl">
+                    <button
+                        onClick={() => setShowPersonInput(!showPersonInput)}
+                        className={cn(
+                            "w-full px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2",
+                            showPersonInput
+                                ? "bg-purple-500/20 border-2 border-purple-500/50 text-purple-300"
+                                : "bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/20"
+                        )}
+                    >
+                        <User className="w-4 h-4" />
+                        {showPersonInput ? "Person Description Added ✓" : "Add Yourself to Scene (Optional)"}
+                    </button>
+
+                    <AnimatePresence>
+                        {showPersonInput && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="mt-3 overflow-hidden"
+                            >
+                                <Textarea
+                                    placeholder="Describe yourself: age, clothing, appearance... Example: 25 year old, wearing black hoodie, brown skin, short hair"
+                                    value={personDescription}
+                                    onChange={(e) => setPersonDescription(e.target.value)}
+                                    className="w-full bg-purple-500/10 border border-purple-500/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-purple-300/50 resize-none"
+                                    rows={3}
+                                />
+                                <p className="text-xs text-gray-500 mt-2 flex items-start gap-2">
+                                    <Sparkles className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                    <span>We'll incorporate your description into the generated scene. The AI will create a person matching your description in the video.</span>
+                                </p>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
                 <p className="pl-4 h-4 text-xs mx-auto text-white/70 flex items-center gap-4">
-                    <span>{submitted ? (mode === 'chaos' ? "AI is directing a chaotic scene..." : "Cinematographer is framing the shot...") : "Ready to go viral!"}</span>
+                    <span>
+                        {submitted
+                            ? (mode === 'chaos' ? "AI is directing a chaotic scene..." : "Cinematographer is framing the shot...")
+                            : personDescription
+                                ? "Ready with your custom character!"
+                                : "Ready to go viral!"}
+                    </span>
                 </p>
             </div>
         </div>

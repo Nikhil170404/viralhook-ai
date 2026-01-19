@@ -5,14 +5,15 @@ import {
     getVeoInstructions,
     getPhysicsKeywords,
     applyVHSEffect,
-    getGlitchKeywords
+    getGlitchKeywords,
+    enhancePersonDescription
 } from '../helpers';
 
 /**
  * CHAOS MODE - Maximum Virality, Glitch, and Physics Breaking
  * Optimized for "Wait what just happened?" reactions
  */
-export function getChaosPrompt(object: string, targetModel?: string) {
+export function getChaosPrompt(object: string, targetModel?: string, personDescription?: string) {
 
     // Select Platform Instructions
     let platformInstructions = "";
@@ -21,11 +22,21 @@ export function getChaosPrompt(object: string, targetModel?: string) {
     else if (targetModel?.toLowerCase().includes("veo")) platformInstructions = getVeoInstructions();
     else platformInstructions = getKlingInstructions() + "\n" + getRunwayInstructions();
 
+    // 🆕 PERSON INTEGRATION LOGIC
+    let subjectDescription = "A person";
+
+    if (personDescription) {
+        // Clean and enhance the description
+        subjectDescription = enhancePersonDescription(personDescription);
+    }
+
     // ✅ 2026 LATEST CHAOS TRENDS (Expanded to 6 scenarios)
     const chaosScenarios = [
         {
             category: "Physics Break",
-            chaosAction: `The ${object} suddenly turns into liquid mercury, splashes upward against gravity, then evaporates into floating geometric pyramids.`,
+            chaosAction: personDescription
+                ? `${subjectDescription} suddenly turns into liquid mercury, splashes upward against gravity, then evaporates into floating geometric pyramids.`
+                : `The ${object} suddenly turns into liquid mercury, splashes upward against gravity, then evaporates into floating geometric pyramids.`,
             visualStyle: "Datamoshing, glitch texture, RGB split, liquid simulation",
             viralHook: "My brain.exe stopped working 🧠",
             platform: "Kling (High motion)",
@@ -36,7 +47,9 @@ export function getChaosPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Mumbai Traffic Chaos",
-            chaosAction: `The ${object} is stuck in a Mumbai traffic jam where rickshaws are flying in zero gravity and cows are walking vertically on walls.`,
+            chaosAction: personDescription
+                ? `${subjectDescription} is stuck in a Mumbai traffic jam where rickshaws are flying in zero gravity and cows are walking vertically on walls.`
+                : `The ${object} is stuck in a Mumbai traffic jam where rickshaws are flying in zero gravity and cows are walking vertically on walls.`,
             visualStyle: "Surrealism, saturated colors, chaotic motion, fisheye lens",
             viralHook: "Average day in Mumbai 🇮🇳",
             platform: "Runway Gen-4",
@@ -47,7 +60,9 @@ export function getChaosPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Scale Manipulation",
-            chaosAction: `A tiny version of the ${object} is targeted by a giant hand, but then the ${object} suddenly grows 100x size and consumes the hand.`,
+            chaosAction: personDescription
+                ? `A tiny version of ${subjectDescription} is targeted by a giant hand, but then ${subjectDescription} suddenly grows 100x size and consumes the hand.`
+                : `A tiny version of the ${object} is targeted by a giant hand, but then the ${object} suddenly grows 100x size and consumes the hand.`,
             visualStyle: "Fisheye lens, forced perspective, macro photography",
             viralHook: "Uno Reverse Card 🔄",
             platform: "Veo 3",
@@ -58,7 +73,9 @@ export function getChaosPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Digital Meltdown",
-            chaosAction: `The ${object} starts pixelating, then the entire world behind it dissolves into green binary code matrix rain and Windows XP error popups.`,
+            chaosAction: personDescription
+                ? `${subjectDescription} starts pixelating, then the entire world dissolve into green binary code matrix rain and Windows XP error popups.`
+                : `The ${object} starts pixelating, then the entire world behind it dissolves into green binary code matrix rain and Windows XP error popups.`,
             visualStyle: "Cyberpunk, glitch art, VHS static, CRT monitor effect",
             viralHook: "Simulation Glitch 👾",
             platform: "Kling AI",
@@ -69,7 +86,9 @@ export function getChaosPrompt(object: string, targetModel?: string) {
         },
         {
             category: "AI Hallucination Loop",
-            chaosAction: `The ${object} continuously morphs into different related objects every 0.5 seconds (e.g., Cat -> Tiger -> Bread -> Cloud -> Cat) in a seamless, dream-like loop.`,
+            chaosAction: personDescription
+                ? `${subjectDescription} continuously morphs into different related objects every 0.5 seconds (e.g., Cat -> Tiger -> Bread -> Cloud -> Cat) in a seamless, dream-like loop.`
+                : `The ${object} continuously morphs into different related objects every 0.5 seconds (e.g., Cat -> Tiger -> Bread -> Cloud -> Cat) in a seamless, dream-like loop.`,
             visualStyle: "DeepDream aesthetic, morphing, surrealism, fluid transitions",
             viralHook: "Don't watch this while high 🍄",
             platform: "Luma (Loop mode)",
@@ -80,7 +99,9 @@ export function getChaosPrompt(object: string, targetModel?: string) {
         },
         {
             category: "Frozen Time Glitch",
-            chaosAction: `Time freezes for the background, but the ${object} continues moving at 10x speed, vibrating and leaving 'ghost' trails behind it.`,
+            chaosAction: personDescription
+                ? `Time freezes for the background, but ${subjectDescription} continues moving at 10x speed, vibrating and leaving 'ghost' trails behind.`
+                : `Time freezes for the background, but the ${object} continues moving at 10x speed, vibrating and leaving 'ghost' trails behind it.`,
             visualStyle: "Long exposure light trails, motion after-image, ghosting effect",
             viralHook: "Ping: 999ms 🔴",
             platform: "Runway Gen-4 (Motion Brush)",
@@ -100,6 +121,8 @@ export function getChaosPrompt(object: string, targetModel?: string) {
     const systemPrompt = `You are a CHAOS AGENT for Viral Video AI.
 
 **OBJECT INPUT**: "${object}"
+${personDescription ? `**PERSON IN SCENE**: ${subjectDescription}` : ''}
+
 **SELECTED STYLE**: ${randomChaos.category}
 
 **PLATFORM INSTRUCTIONS**:
@@ -116,7 +139,7 @@ ${vhsInstructions ? `**VHS EFFECTS**:\n${vhsInstructions}` : ''}
 
 **TASK**:
 Generate a specific viral video prompt where the "${object}" is the central element.
-Integrate the object naturally into the following action:
+Integrate the ${personDescription ? "person" : "object"} naturally into the following action:
 "${randomChaos.chaosAction}"
 
 **VISUAL STYLE**:
@@ -142,7 +165,7 @@ ${randomChaos.visualStyle}
 3. Duration: 5 seconds.
 4. NO logic, pure content.
 5. Use the provided Physics/Glitch vocabulary to enhance the prompt.
-6. **Integrate the object** naturally into the chaos (don't just paste the name).
+6. **Integrate the ${personDescription ? "person" : "object"}** naturally into the chaos.
 
 ${negPrompt ? `Avoid: ${negPrompt}` : ''}
 
@@ -150,6 +173,7 @@ ${negPrompt ? `Avoid: ${negPrompt}` : ''}
 {
   "prompt": "[Detailed chaotic prompt instructions integrating the object]",
   "hook": "${randomChaos.viralHook}",
+  "personNote": "${personDescription ? 'Custom character included' : 'Generic character'}",
   "photoInstructions": "Upload photo of ${object} -> Set Chaos Level to MAX (10) -> Use '${randomChaos.visualStyle}' preset",
   "expectedViews": "5-50M views (High variance)",
   "difficulty": "${randomChaos.difficulty}",
