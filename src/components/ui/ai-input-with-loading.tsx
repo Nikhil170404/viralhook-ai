@@ -361,6 +361,24 @@ export function AIInputWithLoading({
                                     <Sparkles className="w-3 h-3 mt-0.5 flex-shrink-0" />
                                     <span>We'll incorporate your description into the generated scene. The AI will create a person matching your description in the video.</span>
                                 </p>
+
+                                <div className="flex flex-wrap gap-2 mt-3 pl-1">
+                                    <span className="text-[10px] text-gray-500 py-1">Try:</span>
+                                    {[
+                                        "24yo Indian male, black hoodie, jeans",
+                                        "Blonde woman, red dress, elegant",
+                                        "Cyberpunk character, neon jacket, mask",
+                                        "Elderly man, glasses, grey suit"
+                                    ].map((ex, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => setPersonDescription(ex)}
+                                            className="text-[10px] px-2 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 transition-colors cursor-pointer"
+                                        >
+                                            {ex}
+                                        </button>
+                                    ))}
+                                </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -376,6 +394,6 @@ export function AIInputWithLoading({
                     </span>
                 </p>
             </div>
-        </div>
+        </div >
     );
 }
