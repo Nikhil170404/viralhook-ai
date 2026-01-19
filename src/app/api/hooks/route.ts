@@ -155,10 +155,45 @@ export async function POST(req: Request) {
         // 9. Parse Response (now returns single video prompt, not array of text hooks)
         const hookResult = parseHooksResponse(content);
 
-        // 10. Return the video prompt format
+        // 10. Save to Database (like main generator)
+        let savedId = null;
+        try {
+            const { data: insertedData, error: insertError } = await supabase
+                .from('generated_prompts')
+                .insert({
+                    user_id: user.id,
+                    prompt_text: hookResult.prompt,
+                    viral_hook: hookResult.viralHook,
+                    category: hookResult.genre,
+                    platform: targetModel,
+                    mechanism: mode,
+                    prompt_type: 'hook',
+                    hook_text: hookResult.hook,
+                    fade_out: hookResult.fadeOut,
+                    camera_work: hookResult.cameraWork,
+                    lighting: hookResult.lighting,
+                    hook_moment: hookResult.hookMoment,
+                    target_model: targetModel,
+                    mode: mode
+                })
+                .select('id')
+                .single();
+
+            if (!insertError && insertedData) {
+                savedId = insertedData.id;
+            } else {
+                console.error(`[${requestId}] Failed to save hook:`, insertError);
+            }
+        } catch (saveError) {
+            console.error(`[${requestId}] Database save error:`, saveError);
+            // Continue even if save fails
+        }
+
+        // 11. Return the video prompt format
         return NextResponse.json({
             success: true,
             requestId,
+            id: savedId,
             hook: hookResult.hook,
             prompt: hookResult.prompt,
             fadeOut: hookResult.fadeOut,

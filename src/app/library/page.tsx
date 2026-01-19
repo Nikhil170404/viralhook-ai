@@ -22,6 +22,7 @@ export default function LibraryPage() {
     const [dbPrompts, setDbPrompts] = useState<PromptTemplate[]>([]);
     const [sortBy, setSortBy] = useState<'newest' | 'popular'>('popular');
     const [selectedMode, setSelectedMode] = useState<string>('all');
+    const [selectedType, setSelectedType] = useState<'all' | 'prompt' | 'hook'>('all'); // NEW: Type filter
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [page, setPage] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
@@ -53,7 +54,12 @@ export default function LibraryPage() {
             .select('*');
 
         if (selectedMode !== 'all') {
-            query = query.eq('mode', selectedMode);
+            query = query.eq('mechanism', selectedMode);
+        }
+
+        // Filter by prompt type (prompt vs hook)
+        if (selectedType !== 'all') {
+            query = query.eq('prompt_type', selectedType);
         }
 
         const { data, error } = await query
@@ -88,13 +94,13 @@ export default function LibraryPage() {
         setIsLoadingMore(false);
     };
 
-    // Initial Fetch & Fetch on Sort Change
+    // Initial Fetch & Fetch on Sort/Filter Change
     useEffect(() => {
         setPage(0);
         setDbPrompts([]);
         setHasMore(true);
         fetchPrompts(0, true);
-    }, [sortBy, selectedMode]);
+    }, [sortBy, selectedMode, selectedType]);
 
     const loadMore = () => {
         const nextPage = page + 1;
@@ -150,6 +156,13 @@ export default function LibraryPage() {
                     <div className="flex flex-col gap-4 w-full md:w-auto items-center md:items-end">
 
                         <div className="flex flex-wrap gap-3 justify-center md:justify-end w-full">
+                            {/* Type Filter (Prompts vs Hooks) */}
+                            <div className="flex bg-white/5 rounded-xl p-1 border border-white/10">
+                                <button onClick={() => setSelectedType('all')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedType === 'all' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}>All</button>
+                                <button onClick={() => setSelectedType('prompt')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedType === 'prompt' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' : 'text-gray-400 hover:text-white'}`}>Prompts</button>
+                                <button onClick={() => setSelectedType('hook')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedType === 'hook' ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' : 'text-gray-400 hover:text-white'}`}>Hooks</button>
+                            </div>
+
                             {/* Sort */}
                             <div className="flex bg-white/5 rounded-xl p-1 border border-white/10">
                                 <button onClick={() => setSortBy('newest')} className={`px-2 py-1.5 rounded-lg transition-all ${sortBy === 'newest' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`} title="Newest"><Clock className="w-4 h-4" /></button>
