@@ -333,7 +333,9 @@ export async function POST(req: Request) {
                 category: randomStyle.category,
                 platform: randomStyle.platform,
                 mechanism: randomStyle.mechanism,
-                mode: mode
+                mode: mode,
+                creator_name: user.user_metadata?.full_name || "Anonymous",
+                creator_avatar: user.user_metadata?.avatar_url || null
             }).select('id').single();
 
             if (insertedData) {

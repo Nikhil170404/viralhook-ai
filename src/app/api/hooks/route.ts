@@ -174,7 +174,9 @@ export async function POST(req: Request) {
                     lighting: hookResult.lighting,
                     hook_moment: hookResult.hookMoment,
                     target_model: targetModel,
-                    mode: mode
+                    mode: mode,
+                    creator_name: user.user_metadata?.full_name || "Anonymous",
+                    creator_avatar: user.user_metadata?.avatar_url || null
                 })
                 .select('id')
                 .single();

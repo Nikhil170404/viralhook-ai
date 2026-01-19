@@ -77,7 +77,10 @@ export default function LibraryPage() {
                 viralHook: p.viral_hook,
                 mechanism: p.mechanism,
                 copyCount: p.copy_count || 0,
-                isCommunity: true
+                isCommunity: true,
+                creatorName: p.creator_name || "Anonymous",
+                creatorAvatar: p.creator_avatar,
+                mode: p.mode
             }));
 
             setDbPrompts(prev => isInitial ? mapped : [...prev, ...mapped]);
@@ -205,9 +208,26 @@ export default function LibraryPage() {
                         >
                             <div>
                                 <div className="flex justify-between items-start mb-4">
-                                    <span className={`text-[10px] font-bold px-2 py-1 rounded border uppercase tracking-widest ${prompt.isCommunity ? 'text-pink-300 border-pink-500/30 bg-pink-900/20' : 'text-purple-300 border-purple-500/30 bg-purple-900/20'}`}>
-                                        {prompt.category}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        {/* Creator Avatar - NEW */}
+                                        {prompt.creatorAvatar && (
+                                            <div className="w-6 h-6 rounded-full overflow-hidden border border-white/20">
+                                                <img src={prompt.creatorAvatar} alt={prompt.creatorName} className="w-full h-full object-cover" />
+                                            </div>
+                                        )}
+                                        <div className="flex flex-col">
+                                            {/* Creator Name - NEW */}
+                                            {prompt.creatorName && prompt.creatorName !== "Anonymous" && (
+                                                <span className="text-[10px] bg-clip-text text-transparent bg-gradient-to-r from-gray-200 to-gray-400 font-bold mb-0.5">
+                                                    {prompt.creatorName}
+                                                </span>
+                                            )}
+                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-widest w-fit ${prompt.isCommunity ? 'text-pink-300 border-pink-500/30 bg-pink-900/20' : 'text-purple-300 border-purple-500/30 bg-purple-900/20'}`}>
+                                                {prompt.mode || prompt.category}
+                                            </span>
+                                        </div>
+                                    </div>
+
                                     {prompt.copyCount !== undefined && prompt.copyCount > 0 && (
                                         <div className="flex items-center gap-1 text-[10px] text-gray-400">
                                             <TrendingUp className="w-3 h-3 text-green-400" /> {prompt.copyCount}

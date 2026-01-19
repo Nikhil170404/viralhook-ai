@@ -28,7 +28,8 @@ export default function LandingPage() {
   const [stats, setStats] = useState({
     total_generated: 0,
     total_creators: 0,
-    total_copies: 0
+    total_copies: 0,
+    top_mode: ''
   });
 
   useEffect(() => {
@@ -206,8 +207,10 @@ export default function LandingPage() {
             <div className="text-gray-500 text-sm font-bold uppercase tracking-widest">Viral Copies</div>
           </div>
           <div>
-            <div className="text-4xl font-black mb-1">2026</div>
-            <div className="text-gray-500 text-sm font-bold uppercase tracking-widest">Future Ready</div>
+            <div className="text-4xl font-black mb-1 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">
+              {stats.top_mode || 'CHAOS'}
+            </div>
+            <div className="text-gray-500 text-sm font-bold uppercase tracking-widest">Trending Mode</div>
           </div>
         </div>
       </section>

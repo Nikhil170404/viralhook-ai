@@ -7,6 +7,9 @@ export interface PromptTemplate {
     mechanism?: string; // Director's note on HOW to achieve it
     isCommunity?: boolean;
     copyCount?: number;
+    creatorName?: string;
+    creatorAvatar?: string;
+    mode?: string;
 }
 
 export const viralPrompts: PromptTemplate[] = [

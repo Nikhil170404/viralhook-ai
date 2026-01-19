@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Zap, ArrowRight, LogOut, Layout, Sparkles } from "lucide-react";
+import { Zap, ArrowRight, LogOut, Layout, Sparkles, Clock } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -88,6 +88,18 @@ export function Navbar() {
                                 )}
                             >
                                 <Layout className="w-4 h-4" /> <span className="hidden md:inline">Library</span>
+                            </Link>
+
+                            <Link
+                                href="/history"
+                                className={cn(
+                                    "flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-medium transition-all flex-shrink-0",
+                                    pathname === "/history"
+                                        ? "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                                )}
+                            >
+                                <Clock className="w-4 h-4" /> <span className="hidden md:inline">History</span>
                             </Link>
 
                             <button
