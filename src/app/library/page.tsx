@@ -6,13 +6,14 @@ import { Copy, Check, Search, TrendingUp, Clock, Globe, ChevronDown, Share2 } fr
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import { Navbar } from "@/components/ui/navbar";
 
-// Init Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Init Supabase with SSR client for proper cookie handling
+const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function LibraryPage() {
     const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -292,8 +293,8 @@ export default function LibraryPage() {
                                         setTimeout(() => setShareCopiedId(null), 2000);
                                     }}
                                     className={`p-2 rounded-lg transition-colors ${shareCopiedId === prompt.id
-                                            ? 'bg-green-500/20 text-green-400'
-                                            : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+                                        ? 'bg-green-500/20 text-green-400'
+                                        : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
                                         }`}
                                     title="Copy Link to Clipboard"
                                 >

@@ -127,7 +127,7 @@ export async function middleware(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     // ===== 4. PROTECTED ROUTES =====
-    const protectedRoutes = ['/generator', '/library'];
+    const protectedRoutes = ['/generator', '/library', '/hooks'];
     const isProtectedRoute = protectedRoutes.some(path => request.nextUrl.pathname.startsWith(path));
 
     if (isProtectedRoute && !user) {

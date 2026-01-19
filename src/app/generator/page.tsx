@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Copy, RefreshCw, LogOut, Share2, Check } from "lucide-react";
@@ -8,15 +8,16 @@ import { viralPrompts } from "@/lib/prompts";
 import { AIInputWithLoading } from "@/components/ui/ai-input-with-loading";
 import { Navbar } from "@/components/ui/navbar";
 
-// Initialize Supabase (Put these in .env.local)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Initialize Supabase with SSR client for proper cookie handling
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function Home() {
   const [session, setSession] = useState<any>(null);
   const [userObject, setUserObject] = useState("");
-  const [selectedPrompt, setSelectedPrompt] = useState<any>(null); // Keeping any for now to avoid strict type mismatch with API response if fields differ
+  const [selectedPrompt, setSelectedPrompt] = useState<any>(null);
   const [generatedResult, setGeneratedResult] = useState("");
   const [isCopied, setIsCopied] = useState(false);
   const [isShareCopied, setIsShareCopied] = useState(false);
@@ -25,16 +26,40 @@ export default function Home() {
   // Check Auth Status & Protect Route
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // Not logged in -> Redirect to Login
+      // Use getSession first for quick check, then validate with getUser
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+      if (!currentSession) {
         window.location.href = '/login';
-      } else {
-        setSession(session);
-        setIsLoading(false);
+        return;
       }
+
+      // Validate the session is still valid on the server
+      const { data: { user }, error } = await supabase.auth.getUser();
+
+      if (error || !user) {
+        // Session is stale, redirect to login
+        await supabase.auth.signOut();
+        window.location.href = '/login';
+        return;
+      }
+
+      setSession(currentSession);
+      setIsLoading(false);
     };
+
     checkAuth();
+
+    // Listen for auth changes (token refresh, sign out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'SIGNED_OUT' || !newSession) {
+        window.location.href = '/login';
+      } else if (event === 'TOKEN_REFRESHED') {
+        setSession(newSession);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   if (isLoading) {

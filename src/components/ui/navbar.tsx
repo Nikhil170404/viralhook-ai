@@ -2,15 +2,16 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Zap, ArrowRight, LogOut, Layout } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
+import { Zap, ArrowRight, LogOut, Layout, Sparkles } from "lucide-react";
+import { createBrowserClient } from "@supabase/ssr";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export function Navbar() {
     const [session, setSession] = useState<any>(null);
@@ -61,6 +62,18 @@ export function Navbar() {
                                     <Zap className="w-3 md:w-4 h-3 md:h-4 fill-current" /> <span>Go to App</span>
                                 </Link>
                             )}
+
+                            <Link
+                                href="/hooks"
+                                className={cn(
+                                    "flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-medium transition-all flex-shrink-0",
+                                    pathname === "/hooks"
+                                        ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                                )}
+                            >
+                                <Sparkles className="w-4 h-4" /> <span className="hidden md:inline">Hooks</span>
+                            </Link>
 
                             <Link
                                 href="/library"
