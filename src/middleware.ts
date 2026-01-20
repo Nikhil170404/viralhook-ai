@@ -30,6 +30,12 @@ export async function middleware(request: NextRequest) {
         },
     });
 
+    // ===== 0. CSRF TOKEN LOGIC MOVED (see end of function) =====
+    // Must run AFTER Supabase handling to avoid response overwrite
+    const isGetRequest = request.method === 'GET';
+    const isApiRoute = request.nextUrl.pathname.startsWith('/api');
+    const hasCsrfCookie = request.cookies.has('csrf_token');
+
     // ===== 1. SECURITY HEADERS =====
     // HSTS (Strict-Transport-Security)
     response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
@@ -125,6 +131,22 @@ export async function middleware(request: NextRequest) {
     // Refresh session if expired - required for Server Components
     // getUser() in pages will validate this token
     await supabase.auth.getSession()
+
+    // ===== 4. CSRF TOKEN GENERATION (for page loads) =====
+    // Must run AFTER Supabase handling since setAll creates new response
+    if (isGetRequest && !isApiRoute && !hasCsrfCookie) {
+        const array = new Uint8Array(32);
+        crypto.getRandomValues(array);
+        const token = Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+
+        response.cookies.set('csrf_token', token, {
+            httpOnly: false, // Must be readable by JS
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            path: '/',
+            maxAge: 60 * 60 * 24, // 24 hours
+        });
+    }
 
     return response
 }
