@@ -20,11 +20,8 @@ interface AIInputWithLoadingProps {
 }
 
 const INTELLIGENCE_MODELS = [
-    { id: "tngtech/deepseek-r1t2-chimera:free", name: "DeepSeek R1 (Speed)", icon: Sparkles, desc: "Fast & intelligent logic" },
     { id: "xiaomi/mimo-v2-flash:free", name: "Xiaomi MIMO v2", icon: Zap, desc: "Fast & optimized for flash" },
-    { id: "deepseek/deepseek-r1-0528:free", name: "DeepSeek R1 Pro", icon: Cpu, desc: "High-end reasoning" },
-    { id: "tngtech/deepseek-r1t-chimera:free", name: "DeepSeek Chimera", icon: Layers, desc: "Balanced performance" },
-    { id: "tngtech/tng-r1t-chimera:free", name: "TNG Chimera", icon: Target, desc: "Specialized tuning" },
+    { id: "tngtech/deepseek-r1t2-chimera:free", name: "TNG Chimera", icon: Target, desc: "Specialized tuning" },
 ];
 
 const MODELS = [

@@ -16,9 +16,8 @@ const supabase = createBrowserClient(
 );
 
 const AI_MODELS = [
-    { id: "tngtech/deepseek-r1t2-chimera:free", name: "DeepSeek R1 (Speed)", icon: Sparkles },
     { id: "xiaomi/mimo-v2-flash:free", name: "Xiaomi MIMO v2", icon: Zap },
-    { id: "deepseek/deepseek-r1-0528:free", name: "DeepSeek R1 Pro", icon: Cpu },
+    { id: "tngtech/deepseek-r1t2-chimera:free", name: "TNG Chimera", icon: Target },
 ];
 
 const TARGET_MODELS = [
