@@ -1,40 +1,61 @@
-import { redis } from '@/lib/redis';
+import { Redis } from '@upstash/redis';
+import { Ratelimit } from '@upstash/ratelimit';
 
-const LIMITS = {
-    FREE: 10,
-    PRO: 1000, // Effectively unlimited for now
+// Redis client (re-used from existing config if possible, but Ratelimit needs Upstash client)
+// We use the one imported from @/lib/redis or create new if needed.
+// Create a dedicated Upstash Redis client for Rate Limiting
+// ensuring compatibility with @upstash/ratelimit
+const redis = Redis.fromEnv();
+
+// --- Burst Rate Limiters (DoS Protection) ---
+// Uses @upstash/ratelimit for sliding window consistency
+export const rateLimiters = {
+    anonymous: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(10, "1 m"), // 10 req/min
+        prefix: "rl:anon",
+        analytics: true,
+    }),
+    authenticated: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(60, "1 m"), // 60 req/min
+        prefix: "rl:auth",
+    }),
+    aiGeneration: new Ratelimit({
+        redis,
+        limiter: Ratelimit.tokenBucket(10, "1 m", 2), // 10 tokens, refill 2/min (Strict)
+        prefix: "rl:ai",
+    }),
 };
 
-// In-memory fallback
-const memoryStore = new Map<string, { count: number, resetAt: number }>();
-const CLEANUP_INTERVAL = 60000; // 1 min (Lazy check limit)
-let lastCleanup = Date.now();
-
-function cleanupMemory() {
-    const now = Date.now();
-    // Only cleanup max once per minute to avoid CPU spikes
-    if (now - lastCleanup < CLEANUP_INTERVAL) return;
-
-    for (const [key, val] of memoryStore.entries()) {
-        if (val.resetAt < now) {
-            memoryStore.delete(key);
+export async function checkBurstLimit(identifier: string, type: keyof typeof rateLimiters) {
+    const { success, limit, remaining, reset } = await rateLimiters[type].limit(identifier);
+    return {
+        success,
+        headers: {
+            "X-RateLimit-Limit": limit.toString(),
+            "X-RateLimit-Remaining": remaining.toString(),
+            "X-RateLimit-Reset": reset.toString(),
         }
-    }
-    lastCleanup = now;
+    };
 }
 
-export async function checkUserRateLimit(userId: string, plan: 'free' | 'pro' = 'free') {
-    cleanupMemory(); // Lazy cleanup trigger
+// --- Daily Usage Quota (Business Logic) ---
+// Explicitly Redis-only (No memory fallback) to prevent inconsistencies in serverless.
+const LIMITS = {
+    FREE: 10,
+    PRO: 1000,
+};
 
+export async function checkUserRateLimit(userId: string, plan: 'free' | 'pro' = 'free') {
     const limit = plan === 'pro' ? LIMITS.PRO : LIMITS.FREE;
     // Daily key: usage:user_id:2023-10-27
     const key = `usage:${userId}:${new Date().toISOString().split('T')[0]}`;
 
     try {
-        // Redis Atomic Increment
         const count = await redis.incr(key);
         if (count === 1) {
-            await redis.expire(key, 86400); // 24h expiration
+            await redis.expire(key, 86400); // 24h
         }
 
         return {
@@ -42,34 +63,21 @@ export async function checkUserRateLimit(userId: string, plan: 'free' | 'pro' = 
             remaining: Math.max(0, limit - count),
             count
         };
-
     } catch (e) {
-        console.error("Redis Rate Limit Error (User)", e);
-
-        // Memory Fallback
-        const now = Date.now();
-        let record = memoryStore.get(key);
-
-        // Initialize or Reset if expired
-        // Note: Memory store key includes date, so explicit expiry check is redundant but good for robustness
-        if (!record) {
-            record = { count: 0, resetAt: now + 86400000 };
-            memoryStore.set(key, record);
-        }
-
-        record.count++;
-
-        return {
-            allowed: record.count <= limit,
-            remaining: Math.max(0, limit - record.count),
-            count: record.count
-        };
+        console.error("Redis User Quota Error:", e);
+        // Fail closed for security/consistency in Redis-only mode?
+        // Or fail open to allow user access if Redis down?
+        // Request said "Redis-only rate limiting... Remove in-memory fallback".
+        // This implies if Redis fails, we might blocking or erroring is better than inconsistent memory state.
+        // However, usually Fail Open is better for UX.
+        // But strict security request implies consistency.
+        // I will return Not Allowed if system error, to be safe?
+        // No, I'll return allowed: false with error log.
+        return { allowed: false, remaining: 0, count: -1, error: true };
     }
 }
 
 export async function incrementUserUsageDB(userId: string, supabaseClient: any) {
-    // Sync to persistent DB (User Analytics)
-    // This should be called after successful generation
     try {
         const { error } = await supabaseClient.rpc('increment_user_usage', { target_user_id: userId });
         if (error) {

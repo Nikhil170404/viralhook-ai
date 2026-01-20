@@ -3,11 +3,12 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import { redis } from '@/lib/redis';
-import { getHooksPrompt, parseHooksResponse } from '@/lib/ai/modes/hooks';
+import { getHooksPrompt, parseHooksResponse } from '@/lib/prompts/modes';
 import { sanitizeInput } from '@/lib/security/sanitize';
 import { moderateContent } from '@/lib/security/content-filter';
 import { logger, createRequestLogger } from '@/lib/logger';
-import { checkUserRateLimit, incrementUserUsageDB } from '@/lib/rate-limit';
+import { checkUserRateLimit, incrementUserUsageDB, checkBurstLimit } from '@/lib/rate-limit';
+import { promptInjectionFilter } from '@/lib/security/prompt-filter';
 
 // --- CONFIGURATION ---
 const CONFIG = {
@@ -27,25 +28,7 @@ const CONFIG = {
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
-// Memory fallback for rate limiting
-const memoryRateLimiter = new Map<string, { count: number; resetAt: number }>();
 
-function checkMemoryRateLimit(userId: string, maxRequests: number): { allowed: boolean } {
-    const now = Date.now();
-    const record = memoryRateLimiter.get(userId);
-
-    if (!record || record.resetAt < now) {
-        memoryRateLimiter.set(userId, { count: 1, resetAt: now + 60000 });
-        return { allowed: true };
-    }
-
-    if (record.count >= maxRequests) {
-        return { allowed: false };
-    }
-
-    record.count++;
-    return { allowed: true };
-}
 
 export async function POST(req: Request) {
     const requestId = crypto.randomUUID().slice(0, 8);
@@ -74,21 +57,13 @@ export async function POST(req: Request) {
 
         if (user) log.child({ userId: user.id });
 
-        // 2. Rate Limiting (Burst)
-        const rateLimitKey = `hooks_limit:${user.id}`;
-        try {
-            const count = await redis.incr(rateLimitKey);
-            if (count === 1) {
-                await redis.expire(rateLimitKey, CONFIG.RATE_LIMIT.WINDOW_SECONDS);
-            }
-            if (count > CONFIG.RATE_LIMIT.MAX_REQUESTS) {
-                return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
-            }
-        } catch {
-            const memCheck = checkMemoryRateLimit(user.id, CONFIG.RATE_LIMIT.MAX_REQUESTS);
-            if (!memCheck.allowed) {
-                return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
-            }
+        // 2. Rate Limiting (Burst Protection via Upstash)
+        const burstLimit = await checkBurstLimit(user.id, 'aiGeneration');
+        if (!burstLimit.success) {
+            return NextResponse.json(
+                { error: "Rate limit exceeded" },
+                { status: 429, headers: burstLimit.headers }
+            );
         }
 
         // Daily Quota Check
@@ -118,6 +93,17 @@ export async function POST(req: Request) {
         }
 
         // 5. Content Moderation
+        // 5. Security: Prompt Injection Check
+        const injectionCheck = promptInjectionFilter.detectInjection(script);
+        if (injectionCheck.blocked) {
+            log.warn(`Prompt Injection Blocked: ${injectionCheck.reason}`, { input: script });
+            return NextResponse.json({
+                error: "Security Violation: Unsafe content detected.",
+                category: injectionCheck.reason
+            }, { status: 400 });
+        }
+
+        // 6. Content Moderation
         const modResult = moderateContent(script);
         if (!modResult.isAllowed) {
             log.warn(`Content moderation blocked: ${modResult.category}`, { category: modResult.category });

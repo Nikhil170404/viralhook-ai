@@ -1,6 +1,4 @@
-import { getCinematicPrompt } from '@/lib/ai/modes/cinematic';
-import { getShockingPrompt } from '@/lib/ai/modes/shocking';
-import { getChaosPrompt } from '@/lib/ai/modes/chaos';
+import { getCinematicPrompt, getShockingPrompt, getChaosPrompt } from '@/lib/prompts/modes';
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
@@ -8,11 +6,12 @@ import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import { redis } from '@/lib/redis';
 import { logger, createRequestLogger } from '@/lib/logger';
-import { checkUserRateLimit, incrementUserUsageDB } from '@/lib/rate-limit';
+import { checkUserRateLimit, incrementUserUsageDB, checkBurstLimit } from '@/lib/rate-limit';
 
 import { validateAndSanitizeInputs, escapeForPrompt } from '@/lib/security/sanitize';
 import { moderateAllInputs } from '@/lib/security/content-filter';
 import { validateGenerateRequest } from '@/lib/schemas/generate';
+import { promptInjectionFilter } from '@/lib/security/prompt-filter';
 
 const CONFIG = {
     RATE_LIMIT: {
@@ -29,10 +28,7 @@ const CONFIG = {
     }
 } as const;
 
-const memoryRateLimiter = new Map<string, { count: number; resetAt: number }>();
 
-export const maxDuration = 60;
-export const dynamic = 'force-dynamic';
 
 function getClientIP(req: Request): string {
     const forwarded = req.headers.get('x-forwarded-for');
@@ -44,23 +40,6 @@ function getClientIP(req: Request): string {
         return realIp;
     }
     return 'unknown';
-}
-
-function checkMemoryRateLimit(userId: string, maxRequests: number): { allowed: boolean; remaining: number } {
-    const now = Date.now();
-    const record = memoryRateLimiter.get(userId);
-
-    if (!record || record.resetAt < now) {
-        memoryRateLimiter.set(userId, { count: 1, resetAt: now + 60000 });
-        return { allowed: true, remaining: maxRequests - 1 };
-    }
-
-    if (record.count >= maxRequests) {
-        return { allowed: false, remaining: 0 };
-    }
-
-    record.count++;
-    return { allowed: true, remaining: maxRequests - record.count };
 }
 
 function createCacheKey(object: string, mode: string, targetModel: string): string {
@@ -117,44 +96,12 @@ export async function POST(req: Request) {
 
         if (user) log.child({ userId: user.id });
 
-        const rateLimitKey = `rate_limit:${user.id}`;
-        let currentCount = 0;
-        let ttl = 60;
-        let redisAvailable = true;
-
-        try {
-            currentCount = await redis.incr(rateLimitKey);
-            if (currentCount === 1) {
-                await redis.expire(rateLimitKey, 60);
-            }
-            ttl = await redis.ttl(rateLimitKey);
-        } catch (redisError) {
-            log.error(`Redis Rate Limit Error:`, redisError as Error);
-            redisAvailable = false;
-
-            const memoryCheck = checkMemoryRateLimit(user.id, CONFIG.RATE_LIMIT.FALLBACK_MAX);
-            if (!memoryCheck.allowed) {
-                return NextResponse.json(
-                    { error: "Rate limit exceeded (degraded mode). Please wait." },
-                    { status: 429 }
-                );
-            }
-            currentCount = CONFIG.RATE_LIMIT.FALLBACK_MAX - memoryCheck.remaining;
-        }
-
-        const maxRequests = redisAvailable ? CONFIG.RATE_LIMIT.MAX_REQUESTS : CONFIG.RATE_LIMIT.FALLBACK_MAX;
-        if (currentCount > maxRequests) {
+        // Rate Limiting (Burst Protection via Upstash)
+        const burstLimit = await checkBurstLimit(user.id, 'aiGeneration');
+        if (!burstLimit.success) {
             return NextResponse.json(
-                { error: `Rate limit exceeded. Please wait ${ttl}s.` },
-                {
-                    status: 429,
-                    headers: {
-                        'Retry-After': String(ttl),
-                        'X-RateLimit-Limit': String(maxRequests),
-                        'X-RateLimit-Remaining': '0',
-                        'X-RateLimit-Reset': String(ttl)
-                    }
-                }
+                { error: "Rate limit exceeded. Please wait." },
+                { status: 429, headers: burstLimit.headers }
             );
         }
 
@@ -196,6 +143,16 @@ export async function POST(req: Request) {
         const object = sanitizeResult.object;
         const personDescription = sanitizeResult.personDescription;
 
+        // Security: Prompt Injection Check
+        const injectionCheck = promptInjectionFilter.detectInjection(object + " " + (personDescription || ""));
+        if (injectionCheck.blocked) {
+            log.warn(`Prompt Injection Blocked: ${injectionCheck.reason}`, { input: object });
+            return NextResponse.json(
+                { error: "Security Violation: Unsafe content detected.", reason: injectionCheck.reason },
+                { status: 400 }
+            );
+        }
+
         const moderationResult = moderateAllInputs(object, personDescription);
         if (!moderationResult.isAllowed) {
             log.warn(`Content moderation blocked: ${moderationResult.category}`, { category: moderationResult.category });
@@ -215,15 +172,14 @@ export async function POST(req: Request) {
         const cacheKey = createCacheKey(object, mode!, targetModel || 'auto');
         let cachedResponse = null;
 
-        if (redisAvailable) {
-            try {
-                const cached = await redis.get(cacheKey);
-                if (cached && typeof cached === 'string') {
-                    cachedResponse = JSON.parse(cached);
-                    log.info(`Cache hit for ${cacheKey}`);
-                }
-            } catch (e) {
+        try {
+            const cached = await redis.get(cacheKey);
+            if (cached && typeof cached === 'string') {
+                cachedResponse = JSON.parse(cached);
+                log.info(`Cache hit for ${cacheKey}`);
             }
+        } catch (e) {
+            // Ignore cache read errors
         }
 
         if (cachedResponse) {
@@ -362,10 +318,11 @@ export async function POST(req: Request) {
             platformSpecific: aiContent.platformSpecific || {},
         };
 
-        if (redisAvailable && !saveError) {
+        if (!saveError) {
             try {
                 await redis.setex(cacheKey, CONFIG.CACHE.TTL_SECONDS, JSON.stringify(responseData));
             } catch (e) {
+                // Ignore cache write errors
             }
         }
 

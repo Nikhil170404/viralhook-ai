@@ -3,9 +3,8 @@ import path from 'path';
 import OpenAI from 'openai';
 
 // Import Modes (Relative paths due to script location)
-import { getChaosPrompt } from '../src/lib/ai/modes/chaos';
-import { getCinematicPrompt } from '../src/lib/ai/modes/cinematic';
-import { getShockingPrompt } from '../src/lib/ai/modes/shocking';
+// Import Modes (Relative paths due to script location)
+import { getChaosPrompt, getCinematicPrompt, getShockingPrompt } from '../src/lib/prompts/modes';
 
 // Load Env
 dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
