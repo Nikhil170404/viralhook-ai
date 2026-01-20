@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { PromptTemplate } from "@/lib/prompts";
-import { Copy, Check, Search, TrendingUp, Clock, Trash2, AlertTriangle, Share2, ChevronDown, Pencil } from "lucide-react";
+import { Copy, Check, Search, TrendingUp, Clock, Trash2, AlertTriangle, Share2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { createBrowserClient } from "@supabase/ssr";
 import { Navbar } from "@/components/ui/navbar";
 import Link from "next/link";
-import { EditModal } from "@/components/ui/edit-modal";
+
 
 // Init Supabase with SSR client
 const supabase = createBrowserClient(
@@ -124,45 +124,13 @@ export default function HistoryPage() {
         }
     };
 
-    // Edit Functionality
-    const [isEditOpen, setIsEditOpen] = useState(false);
-    const [editingPrompt, setEditingPrompt] = useState<PromptTemplate | null>(null);
 
-    const handleEditClick = (prompt: PromptTemplate) => {
-        setEditingPrompt(prompt);
-        setIsEditOpen(true);
-    };
-
-    const handleSaveEdit = async (id: number | string, newText: string, newHook?: string) => {
-        const res = await fetch(`/api/prompts/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt_text: newText, viral_hook: newHook })
-        });
-
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || 'Failed to update');
-        }
-
-        // Update Local State
-        setPrompts(prev => prev.map(p =>
-            p.id === id ? { ...p, template: newText, viralHook: newHook } : p
-        ));
-    };
 
     return (
         <div className="min-h-screen bg-black text-white font-sans selection:bg-pink-500 selection:text-white pt-32 px-6">
             <Navbar />
 
-            <EditModal
-                isOpen={isEditOpen}
-                onClose={() => setIsEditOpen(false)}
-                onSave={handleSaveEdit}
-                promptId={editingPrompt?.id || null}
-                initialText={editingPrompt?.template || ""}
-                initialHook={editingPrompt?.viralHook}
-            />
+
 
             {/* Background Ambience */}
             <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 opacity-30">
@@ -261,13 +229,7 @@ export default function HistoryPage() {
                                         {copiedId === prompt.id ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
                                     </button>
 
-                                    <button
-                                        onClick={() => handleEditClick(prompt)}
-                                        className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white transition-colors"
-                                        title="Edit Prompt"
-                                    >
-                                        <Pencil className="w-3 h-3" />
-                                    </button>
+
 
                                     <button
                                         onClick={() => handleDelete(prompt.id)}
