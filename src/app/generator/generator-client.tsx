@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, RefreshCw, LogOut, Share2, Check } from "lucide-react";
 import { viralPrompts } from "@/lib/prompts";
+import { fetchWithCSRF } from "@/lib/api-client";
 import { AIInputWithLoading } from "@/components/ui/ai-input-with-loading";
 import { Navbar } from "@/components/ui/navbar";
 import { createBrowserClient } from "@supabase/ssr";
@@ -82,7 +83,7 @@ export default function GeneratorClient({ initialSession }: GeneratorClientProps
                                 // Call the new API
                                 try {
                                     const token = session?.access_token;
-                                    const response = await fetch('/api/generate', {
+                                    const response = await fetchWithCSRF('/api/generate', {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',

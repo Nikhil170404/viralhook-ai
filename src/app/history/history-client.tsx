@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/ui/navbar";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { fetchWithCSRF } from "@/lib/api-client";
 
 type HistoryClientProps = {
     initialPrompts: any[];
@@ -120,7 +121,7 @@ export default function HistoryClient({ initialPrompts, initialHasMore, initialT
         setDeletingId(id);
 
         try {
-            const res = await fetch(`/api/prompts/${id}`, { method: 'DELETE' });
+            const res = await fetchWithCSRF(`/api/prompts/${id}`, { method: 'DELETE' });
             if (!res.ok) throw new Error("Failed to delete");
 
             setPrompts(prev => prev.filter(p => p.id !== id));

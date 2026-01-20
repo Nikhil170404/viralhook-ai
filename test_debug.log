@@ -1,0 +1,18 @@
+Safe Prompt (Nike): blocked=false, score=0, reason=Safe
+Safe Prompt (Person): blocked=true, score=80, reason=Unicode obfuscation
+Safe Prompt (City): blocked=true, score=80, reason=Unicode obfuscation
+Safe Prompt (Nike): blocked=false, score=0, reason=Safe
+Safe Prompt (Person): blocked=true, score=80, reason=Unicode obfuscation
+Safe Prompt (City): blocked=true, score=80, reason=Unicode obfuscation
+Safe Prompt (Nike): blocked=false, score=0, reason=Safe
+Safe Prompt (Person): blocked=true, score=80, reason=Unicode obfuscation
+Safe Prompt (City): blocked=true, score=80, reason=Unicode obfuscation
+Safe Prompt (Nike): blocked=false, score=0, reason=Safe
+Safe Prompt (Person): blocked=false, score=0, reason=Safe
+Safe Prompt (City): blocked=false, score=0, reason=Safe
+Safe Prompt (Nike): blocked=false, score=0, reason=Safe
+Safe Prompt (Person): blocked=false, score=0, reason=Safe
+Safe Prompt (City): blocked=false, score=0, reason=Safe
+Safe Prompt (Nike): blocked=false, score=0, reason=Safe
+Safe Prompt (Person): blocked=false, score=0, reason=Safe
+Safe Prompt (City): blocked=false, score=0, reason=Safe

@@ -1,3 +1,4 @@
+import { withCSRF } from '@/middleware/withCSRF';
 import { getCinematicPrompt, getShockingPrompt, getChaosPrompt } from '@/lib/prompts/modes';
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
@@ -11,7 +12,7 @@ import { checkUserRateLimit, incrementUserUsageDB, checkBurstLimit } from '@/lib
 import { validateAndSanitizeInputs, escapeForPrompt } from '@/lib/security/sanitize';
 import { moderateAllInputs } from '@/lib/security/content-filter';
 import { validateGenerateRequest } from '@/lib/schemas/generate';
-import { promptInjectionFilter } from '@/lib/security/prompt-filter';
+import { advancedPromptFilter } from '@/lib/security/advanced-prompt-filter';
 
 const CONFIG = {
     RATE_LIMIT: {
@@ -47,9 +48,11 @@ function createCacheKey(object: string, mode: string, targetModel: string): stri
     return `prompt_cache:${Buffer.from(normalized).toString('base64').slice(0, 50)}`;
 }
 
-export async function POST(req: Request) {
+async function generateHandler(req: Request) {
     const requestId = crypto.randomUUID().slice(0, 8);
+    console.log('[DEBUG] Handler Started', requestId);
     const clientIP = getClientIP(req);
+    console.log('[DEBUG] IP got', clientIP);
     const log = createRequestLogger(requestId);
 
     try {
@@ -143,14 +146,17 @@ export async function POST(req: Request) {
         const object = sanitizeResult.object;
         const personDescription = sanitizeResult.personDescription;
 
-        // Security: Prompt Injection Check
-        const injectionCheck = promptInjectionFilter.detectInjection(object + " " + (personDescription || ""));
+        // 5. Security: Prompt Injection Check (Advanced)
+        const combinedInput = object + " " + (personDescription || "");
+        const injectionCheck = advancedPromptFilter.detectInjection(combinedInput);
+
         if (injectionCheck.blocked) {
-            log.warn(`Prompt Injection Blocked: ${injectionCheck.reason}`, { input: object });
-            return NextResponse.json(
-                { error: "Security Violation: Unsafe content detected.", reason: injectionCheck.reason },
-                { status: 400 }
-            );
+            log.warn(`Injection Blocked (Score: ${injectionCheck.score}): ${injectionCheck.reason}`, { input: object });
+            return NextResponse.json({
+                error: "Security Violation: Unsafe content detected.",
+                category: injectionCheck.reason,
+                score: process.env.NODE_ENV === 'development' ? injectionCheck.score : undefined
+            }, { status: 400 });
         }
 
         const moderationResult = moderateAllInputs(object, personDescription);
@@ -355,3 +361,5 @@ export async function POST(req: Request) {
         );
     }
 }
+
+export const POST = withCSRF(generateHandler as any);

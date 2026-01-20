@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/ui/navbar";
+import { fetchWithCSRF } from "@/lib/api-client";
 
 const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -99,7 +100,7 @@ export default function HooksPage() {
         setResult(null);
 
         try {
-            const response = await fetch('/api/hooks', {
+            const response = await fetchWithCSRF('/api/hooks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

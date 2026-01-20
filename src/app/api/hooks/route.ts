@@ -1,3 +1,4 @@
+import { withCSRF } from '@/middleware/withCSRF';
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -8,7 +9,7 @@ import { sanitizeInput } from '@/lib/security/sanitize';
 import { moderateContent } from '@/lib/security/content-filter';
 import { logger, createRequestLogger } from '@/lib/logger';
 import { checkUserRateLimit, incrementUserUsageDB, checkBurstLimit } from '@/lib/rate-limit';
-import { promptInjectionFilter } from '@/lib/security/prompt-filter';
+import { advancedPromptFilter } from '@/lib/security/advanced-prompt-filter';
 
 // --- CONFIGURATION ---
 const CONFIG = {
@@ -30,7 +31,7 @@ export const dynamic = 'force-dynamic';
 
 
 
-export async function POST(req: Request) {
+async function hooksHandler(req: Request) {
     const requestId = crypto.randomUUID().slice(0, 8);
     const log = createRequestLogger(requestId);
 
@@ -94,12 +95,13 @@ export async function POST(req: Request) {
 
         // 5. Content Moderation
         // 5. Security: Prompt Injection Check
-        const injectionCheck = promptInjectionFilter.detectInjection(script);
+        const injectionCheck = advancedPromptFilter.detectInjection(script);
         if (injectionCheck.blocked) {
-            log.warn(`Prompt Injection Blocked: ${injectionCheck.reason}`, { input: script });
+            log.warn(`Prompt Injection Blocked (Score: ${injectionCheck.score}): ${injectionCheck.reason}`, { input: script });
             return NextResponse.json({
                 error: "Security Violation: Unsafe content detected.",
-                category: injectionCheck.reason
+                category: injectionCheck.reason,
+                score: process.env.NODE_ENV === 'development' ? injectionCheck.score : undefined
             }, { status: 400 });
         }
 
