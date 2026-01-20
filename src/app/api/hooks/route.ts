@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
-import { redis } from '@/lib/redis';
+
 import { getHooksPrompt, parseHooksResponse } from '@/lib/prompts/modes';
 import { sanitizeInput } from '@/lib/security/sanitize';
 import { moderateContent } from '@/lib/security/content-filter';

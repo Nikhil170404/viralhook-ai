@@ -320,7 +320,7 @@ export async function POST(req: Request) {
 
         if (!saveError) {
             try {
-                await redis.setex(cacheKey, CONFIG.CACHE.TTL_SECONDS, JSON.stringify(responseData));
+                await redis.set(cacheKey, JSON.stringify(responseData), { ex: CONFIG.CACHE.TTL_SECONDS });
             } catch (e) {
                 // Ignore cache write errors
             }
