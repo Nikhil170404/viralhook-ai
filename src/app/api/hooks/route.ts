@@ -226,3 +226,5 @@ async function hooksHandler(req: Request) {
         );
     }
 }
+
+export const POST = withCSRF(hooksHandler as any);
