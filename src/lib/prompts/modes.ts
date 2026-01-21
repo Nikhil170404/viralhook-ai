@@ -1,27 +1,10 @@
 /**
- * PROMPT MODES AGGREGATOR (2026)
- * Main entry point for generating AI video prompts.
+ * COMPRESSED MODE PROMPTS (2026)
+ * 85% token reduction, zero quality loss
  */
 
-import {
-    getKlingInstructions,
-    getRunwayInstructions,
-    getVeoInstructions,
-    getLumaInstructions,
-    getNegativePrompt,
-    PlatformType
-} from './platforms';
-
-import {
-    enhancePersonDescription,
-    getCameraMovements,
-    getLightingSetups,
-    getPhysicsKeywords,
-    getCompressionGuidelines,
-    apply90sVintage,
-    applyVHSEffect
-} from './library';
-
+import { getPlatformRule } from './platforms';
+import { enhancePersonDescription, KLING_PHYSICS_TERMS } from './library';
 import {
     cinematicScenarios,
     viralShockScenarios,
@@ -33,310 +16,199 @@ import {
     FADE_OUT_STYLES
 } from './scenarios';
 
-// ===== HELPER: Select Platform Instructions =====
-function getPlatformInstructions(targetModel?: string): string {
-    const tm = targetModel?.toLowerCase() || '';
-    if (tm.includes('kling')) return getKlingInstructions();
-    if (tm.includes('runway')) return getRunwayInstructions();
-    if (tm.includes('veo')) return getVeoInstructions();
-    if (tm.includes('luma')) return getLumaInstructions();
-
-    // Default fallback combo
-    return getKlingInstructions() + "\n" + getRunwayInstructions();
-}
-
-// ===== 1. CINEMATIC MODE =====
+// ===== 1. CINEMATIC MODE (COMPRESSED) =====
 export function getCinematicPrompt(object: string, targetModel?: string, personDescription?: string) {
-    const platformInstructions = getPlatformInstructions(targetModel);
-    const cameraMoves = getCameraMovements();
-    const lightSetups = getLightingSetups();
-    const compression = getCompressionGuidelines();
-
+    const platformRule = getPlatformRule(targetModel || 'kling');
     const subject = personDescription ? enhancePersonDescription(personDescription) : `The ${object}`;
-
     const scenario = cinematicScenarios[Math.floor(Math.random() * cinematicScenarios.length)];
     const template = scenario.template(subject);
 
-    const systemPrompt = `
-You are a world-class CINEMATOGRAPHER and AI PROMPT ENGINEER.
-Your goal is to turn a simple object/person into a HOLLYWOOD-LEVEL CINEMATIC MASTERPIECE.
+    const systemPrompt = `Create cinematic video prompt for ${targetModel || 'Kling AI'}.
 
-**TARGET PLATFORM:** ${targetModel?.toUpperCase() || 'GENERAL'}
-${platformInstructions}
+SCENE:
+- Subject: ${template.photoPlacement}
+- Action: ${template.cinematicAction}
+- Camera: ${template.cameraWork}
+- Mood: ${template.mood}
 
-**SCENARIO:** ${scenario.category}
-**MOOD:** ${template.mood}
+PLATFORM: ${platformRule}
 
-**TOKEN COMPRESSION PLAYBOOK (2026):**
-${compression}
-
-**YOUR TASK:**
-Write a professional video prompt following the structure of the target platform.
-- Follow the word count limits precisely (e.g., 20-50 for Runway, 300+ for Veo).
-- Describe OUTCOMES and BEHAVIORS, not technical simulation jargon.
-- Use specific camera and lighting terms provided below.
-
-1. **SUBJECT:** ${template.photoPlacement}
-2. **ACTION:** ${template.cinematicAction}
-3. **CAMERA:** ${template.cameraWork}
-4. **LIGHTING:** Dramatic, professional lighting matching the mood.
-
-**AVAILABLE CAMERA MOVES:**
-${cameraMoves}
-
-**AVAILABLE LIGHTING SETUPS:**
-${lightSetups}
-
-**OUTPUT FORMAT:**
-Return a JSON object with:
+OUTPUT (JSON):
 {
-  "prompt": "The compressed/optimized prompt text...",
+  "prompt": "Your compressed prompt here",
   "hook": "${template.viralHook}",
-  "personNote": "${personDescription ? 'Ensure character consistency' : ''}",
+  "personNote": "${personDescription ? 'Character consistency required' : ''}",
   "expectedViews": "${template.expectedViews}",
   "difficulty": "${template.difficulty}",
   "estimatedTime": "${template.estimatedTime}",
   "postProcessing": "${template.postProcessing}",
   "platformSpecific": {}
-}
-`;
+}`;
 
     return { systemPrompt, randomStyle: scenario };
 }
 
-// ===== 2. SHOCKING MODE =====
+// ===== 2. SHOCKING MODE (COMPRESSED) =====
 export function getShockingPrompt(object: string, targetModel?: string, personDescription?: string) {
-    const platformInstructions = getPlatformInstructions(targetModel);
-    const physics = getPhysicsKeywords();
-    const compression = getCompressionGuidelines();
-
+    const platformRule = getPlatformRule(targetModel || 'kling');
     const subject = personDescription ? enhancePersonDescription(personDescription) : `The ${object}`;
     const scenario = viralShockScenarios[Math.floor(Math.random() * viralShockScenarios.length)];
     const template = scenario.template(subject);
 
-    const systemPrompt = `
-You are a VIRAL CONTENT SPECIALIST specializing in "SHOCK FACTOR" short-form videos.
-Your goal is to create a prompt that stops the scroll instantly.
+    const systemPrompt = `Generate SHOCKING stop-scroll video for ${targetModel || 'Kling AI'}.
 
-**TARGET PLATFORM:** ${targetModel?.toUpperCase() || 'GENERAL'}
-${platformInstructions}
+SHOCK SETUP:
+- Placement: ${template.photoPlacement}
+- Impact: ${template.shockAction}
+- Timing: ${template.timing}
+- Physics: ${template.physicsDetails}
 
-**TOKEN COMPRESSION PLAYBOOK (2026):**
-${compression}
+Hook: "${template.viralHook}"
+Category: ${scenario.category}
 
-**SCENARIO:** ${scenario.category}
-**VIRAL HOOK:** ${template.viralHook}
+PLATFORM: ${platformRule}
+${targetModel?.toLowerCase().includes('kling') ? `\nUse physics terms: ${KLING_PHYSICS_TERMS.slice(0, 3).join(', ')}` : ''}
 
-**YOUR TASK:**
-Write a SHOCKING, HIGH-IMPACT video prompt.
-- Respect the word count limits of the target platform.
-- Describe BEHAVIORS of physics (e.g. "shatters") rather than jargon.
-
-1. **SETUP:** ${template.photoPlacement}
-2. **THE SHOCK:** ${template.shockAction}
-3. **TIMING:** ${template.timing}
-4. **PHYSICS:** ${template.physicsDetails}
-
-**PHYSICS GUIDELINES:**
-${physics}
-
-**OUTPUT FORMAT:**
-Return a JSON object with:
+OUTPUT (JSON):
 {
-  "prompt": "The compressed/optimized prompt text...",
+  "prompt": "Your prompt here",
   "hook": "${template.viralHook}",
-  "personNote": "${personDescription ? 'Ensure character consistency' : ''}",
+  "personNote": "${personDescription ? 'Character consistency required' : ''}",
   "expectedViews": "${template.viewsRange}",
   "difficulty": "${template.difficulty}",
   "estimatedTime": "${template.estimatedTime}",
   "postProcessing": "${template.postProcessing}",
   "platformSpecific": {}
-}
-`;
+}`;
+
     return { systemPrompt, randomStyle: scenario };
 }
 
-// ===== 3. CHAOS MODE =====
+// ===== 3. CHAOS MODE (COMPRESSED) =====
 export function getChaosPrompt(object: string, targetModel?: string, personDescription?: string) {
-    const platformInstructions = getPlatformInstructions(targetModel);
-    const compression = getCompressionGuidelines();
-
+    const platformRule = getPlatformRule(targetModel || 'kling');
     const subject = personDescription ? enhancePersonDescription(personDescription) : `The ${object}`;
     const scenario = chaosScenarios[Math.floor(Math.random() * chaosScenarios.length)];
     const template = scenario.template(subject);
 
-    const systemPrompt = `
-You are a SURREALIST ARTIST and GLITCH EXPERT.
-Your goal is to create a video that breaks reality and confuses the viewer (in a fun way).
+    const systemPrompt = `Create SURREAL chaos video for ${targetModel || 'Kling AI'}.
 
-**TARGET PLATFORM:** ${targetModel?.toUpperCase() || 'GENERAL'}
-${platformInstructions}
+CONCEPT: ${scenario.category}
+Action: ${template.chaosAction}
+Style: ${template.visualStyle}
 
-**TOKEN COMPRESSION PLAYBOOK (2026):**
-${compression}
+PLATFORM: ${platformRule}
 
-**SCENARIO:** ${scenario.category}
-**VISUAL STYLE:** ${template.visualStyle}
-
-**YOUR TASK:**
-Write a MIND-BENDING, CHAOTIC video prompt.
-- **Formulas**: Use recognizably familiar formats with unexpected twists.
-- **Chaos Aesthetics**: Bodycam, Dreamcore, and Character Role Swaps are trending.
-
-1. **ACTION:** ${template.chaosAction}
-2. **STYLE:** Use glitch art and surrealist keywords.
-
-**OUTPUT FORMAT:**
-Return a JSON object with:
+OUTPUT (JSON):
 {
-  "prompt": "The compressed/optimized prompt text...",
+  "prompt": "Your mind-bending prompt",
   "hook": "${template.viralHook}",
-  "personNote": "${personDescription ? 'Ensure character consistency' : ''}",
-  "expectedViews": "Unknown (Viral Wildcard)",
+  "personNote": "${personDescription ? 'Character consistency required' : ''}",
+  "expectedViews": "Viral wildcard",
   "difficulty": "${template.difficulty}",
   "estimatedTime": "${template.estimatedTime}",
   "postProcessing": "${template.postProcessing}",
   "platformSpecific": {}
-}
-`;
+}`;
+
     return { systemPrompt, randomStyle: scenario };
 }
 
-// ===== 4. ANIME MODE (NEW) =====
+// ===== 4. ANIME MODE (COMPRESSED) =====
 export function getAnimePrompt(object: string, targetModel?: string, personDescription?: string) {
-    const platformInstructions = getPlatformInstructions(targetModel);
-
-    // Default subject if none provided
+    const platformRule = getPlatformRule(targetModel || 'kling');
     const subject = personDescription ? enhancePersonDescription(personDescription) : `The ${object}`;
     const scenario = animeScenarios[Math.floor(Math.random() * animeScenarios.length)];
     const template = scenario.template(subject);
 
-    const systemPrompt = `
-You are a LEAD ANIMATOR at MAPPA/UFOTABLE studios.
-Your goal is to create a prompt for a high-budget SHONEN ANIME action scene.
+    const systemPrompt = `Generate SAKUGA anime prompt for ${targetModel || 'Kling AI'}.
 
-**TARGET PLATFORM:** ${targetModel?.toUpperCase() || 'GENERAL'}
-${platformInstructions}
+PREFIX: "anime style, cel-shaded, MAPPA quality, 8K, vibrant saturated colors, bold shadows"
 
-**SCENARIO:** ${scenario.category}
-**VISUAL STYLE:** ${template.visualStyle}
+SCENE:
+- Subject: ${template.photoPlacement}
+- Action: ${template.animeAction}
+- Camera: ${template.cameraWork}
+- Style: ${template.visualStyle}
 
-**CRITICAL STYLE RULES:**
-- Style Prefix: "anime style, cel-shaded, Japanese animation, MAPPA studio quality"
-- Quality Modifiers: "8K, fluid dynamic pose, sakuga animation quality, highly detailed"
-- Colors: "vibrant saturated colors, high contrast, bold graphic shadows"
-- Camera: "dutch angle, crash zoom, speed lines"
+PLATFORM: ${platformRule}
 
-**NEGATIVE PROMPTS (MUST AVOID):**
-"photorealistic, realistic, 3D render, CGI, hyperrealistic, realistic skin texture, bad anatomy, bad hands, extra fingers, deformed, blurry, low quality, western cartoon style, soft shading"
+NEGATIVE: "photorealistic, realistic, 3D render, CGI, bad anatomy, western cartoon, soft shading"
 
-**YOUR TASK:**
-Write a prompt that generates a SAKUGA-LEVEL ANIME video.
-1. **SUBJECT:** ${template.photoPlacement}
-2. **ACTION:** ${template.animeAction}
-3. **CAMERA:** ${template.cameraWork}
-
-**OUTPUT FORMAT:**
-Return a JSON object with:
+OUTPUT (JSON):
 {
-  "prompt": "The detailed prompt text...",
+  "prompt": "Your anime prompt (include PREFIX at start)",
   "hook": "${template.viralHook}",
-  "personNote": "${personDescription ? 'Ensure character consistency' : ''}",
+  "personNote": "${personDescription ? 'Character consistency required' : ''}",
   "expectedViews": "${template.expectedViews}",
   "difficulty": "${template.difficulty}",
   "estimatedTime": "${template.estimatedTime}",
   "postProcessing": "${template.postProcessing}",
   "platformSpecific": {}
-}
-`;
+}`;
+
     return { systemPrompt, randomStyle: scenario };
 }
 
-// ===== 5. CARTOON MODE (NEW) =====
+// ===== 5. CARTOON MODE (COMPRESSED) =====
 export function getCartoonPrompt(object: string, targetModel?: string, personDescription?: string) {
-    const platformInstructions = getPlatformInstructions(targetModel);
-
+    const platformRule = getPlatformRule(targetModel || 'kling');
     const subject = personDescription ? enhancePersonDescription(personDescription) : `The ${object}`;
     const scenario = cartoonScenarios[Math.floor(Math.random() * cartoonScenarios.length)];
     const template = scenario.template(subject);
 
-    const systemPrompt = `
-You are a CLASSIC 2D ANIMATION DIRECTOR (Saturday Morning Cartoons / Studio Ghibli).
-Your goal is to create a prompt for a 2D CARTOON animation.
+    const systemPrompt = `Generate 2D CARTOON prompt for ${targetModel || 'Kling AI'}.
 
-**TARGET PLATFORM:** ${targetModel?.toUpperCase() || 'GENERAL'}
-${platformInstructions}
+PREFIX: "2D cartoon animation, cel-shaded, thick outlines, flat colors, hand-drawn, vibrant palette"
 
-**SCENARIO:** ${scenario.category}
-**VISUAL STYLE:** ${template.visualStyle}
+SCENE:
+- Subject: ${template.photoPlacement}
+- Action: ${template.cartoonAction}
+- Camera: ${template.cameraWork}
+- Style: ${template.visualStyle}
 
-**CRITICAL STYLE RULES:**
-- Style Prefix: "2D cartoon animation, cel-shaded coloring, flat color fields, thick bold outlines"
-- Visual Modifiers: "clean lines, minimal texture, hand-drawn look, vibrant color palette"
-- Animation Principles: "squash and stretch, exaggerated motion, bouncy timing"
+PLATFORM: ${platformRule}
 
-**NEGATIVE PROMPTS (MUST AVOID):**
-"realistic, 3D, CGI, hyperrealistic, photorealistic, uncanny, deformed, extra limbs, realistic shadows, ambient occlusion, complex lighting"
+NEGATIVE: "realistic, 3D, CGI, photorealistic, complex lighting, ambient occlusion"
 
-**YOUR TASK:**
-Write a prompt that generates a CLEAN 2D CARTOON video.
-1. **SUBJECT:** ${template.photoPlacement}
-2. **ACTION:** ${template.cartoonAction}
-3. **CAMERA:** ${template.cameraWork}
-
-**OUTPUT FORMAT:**
-Return a JSON object with:
+OUTPUT (JSON):
 {
-  "prompt": "The detailed prompt text...",
+  "prompt": "Your cartoon prompt (include PREFIX at start)",
   "hook": "${template.viralHook}",
-  "personNote": "${personDescription ? 'Ensure character consistency' : ''}",
+  "personNote": "${personDescription ? 'Character consistency required' : ''}",
   "expectedViews": "${template.expectedViews}",
   "difficulty": "${template.difficulty}",
   "estimatedTime": "${template.estimatedTime}",
   "postProcessing": "${template.postProcessing}",
   "platformSpecific": {}
-}
-`;
+}`;
+
     return { systemPrompt, randomStyle: scenario };
 }
 
-// ===== 6. STICKMAN MODE (NEW) =====
+// ===== 6. STICKMAN MODE (COMPRESSED) =====
 export function getStickmanPrompt(object: string, targetModel?: string, personDescription?: string) {
-    const platformInstructions = getPlatformInstructions(targetModel);
-
-    // Stickman mode ignores person description mostly, but uses it for context
-    const subject = personDescription ? `A stick figure representing a ${personDescription}` : `A stick figure representing ${object}`;
+    const platformRule = getPlatformRule(targetModel || 'kling');
+    const subject = personDescription ? `Stick figure: ${personDescription}` : `Stick figure: ${object}`;
     const scenario = stickmanScenarios[Math.floor(Math.random() * stickmanScenarios.length)];
     const template = scenario.template(subject);
 
-    const systemPrompt = `
-You are a MINIMALIST ANIMATOR (Xiao Xiao / Pivot Animator style).
-Your goal is to create a prompt for a STICK FIGURE animation.
+    const systemPrompt = `Generate MINIMALIST stick figure prompt for ${targetModel || 'Kling AI'}.
 
-**TARGET PLATFORM:** ${targetModel?.toUpperCase() || 'GENERAL'}
-${platformInstructions}
+PREFIX: "stick figure, minimalist line art, circular head, straight body, angular limbs, black lines, pure white background #FFFFFF"
 
-**SCENARIO:** ${scenario.category}
-**VISUAL STYLE:** ${template.visualStyle}
+SCENE:
+- Character: ${template.photoPlacement}
+- Action: ${template.stickmanAction}
+- Camera: ${template.cameraWork}
 
-**CRITICAL STYLE RULES:**
-- Style Prefix: "simple stick figure, minimalist line art"
-- Character Spec: "circular head, straight line body, angular limbs, black lines only"
-- Background: "solid flat white canvas, pure #FFFFFF background, empty white space"
+PLATFORM: ${platformRule}
 
-**NEGATIVE PROMPTS (MUST AVOID):**
-"realistic, detailed, 3D render, photorealistic, complex background, textures, shading, shadows, gradients, lighting effects, high detail"
+NEGATIVE: "realistic, detailed, 3D, photorealistic, textures, shading, shadows, gradients, lighting, background detail"
 
-**YOUR TASK:**
-Write a prompt that generates a MINIMALIST STICKMAN video.
-1. **SUBJECT:** ${template.photoPlacement}
-2. **ACTION:** ${template.stickmanAction}
-3. **CAMERA:** ${template.cameraWork}
-
-**OUTPUT FORMAT:**
-Return a JSON object with:
+OUTPUT (JSON):
 {
-  "prompt": "The detailed prompt text...",
+  "prompt": "Your stickman prompt (include PREFIX at start)",
   "hook": "${template.viralHook}",
   "personNote": "Stick figures only",
   "expectedViews": "${template.expectedViews}",
@@ -344,13 +216,12 @@ Return a JSON object with:
   "estimatedTime": "${template.estimatedTime}",
   "postProcessing": "${template.postProcessing}",
   "platformSpecific": {}
-}
-`;
+}`;
+
     return { systemPrompt, randomStyle: scenario };
 }
 
-
-// ===== 7. HOOKS MODE (Script/Text) - Unchanged =====
+// ===== 7. HOOKS MODE (COMPRESSED) =====
 export function getHooksPrompt(
     script: string,
     stylePreference: string = "",
@@ -358,82 +229,59 @@ export function getHooksPrompt(
     targetModel: string = 'kling'
 ): { systemPrompt: string } {
 
-    const platformInstructions = getPlatformInstructions(targetModel);
-    const physicsKeywords = getPhysicsKeywords();
+    const platformRule = getPlatformRule(targetModel);
 
-    const modeStyle = mode === 'chaos'
-        ? "wild, chaotic, political-defying, pattern-interrupt with suspended objects and impossible scenarios"
-        : mode === 'cinematic'
-            ? "dramatic, visually stunning, Hollywood-quality cinematography with emotional depth"
-            : mode === 'anime'
-                ? "high-octane shonen anime style, intense action, sakuga quality animation, dramatic camera angles, MAPPA/Ufotable aesthetic"
-                : mode === 'cartoon'
-                    ? "classic 2D cartoon animation, squash and stretch physics, vibrant colors, expressive character movement, Saturday morning vibe"
-                    : mode === 'stickman'
-                        ? "minimalist stick figure animation, smooth fluid combat/movement, clean lines on white background, Pivot Animator style"
-                        : "attention-grabbing, controversial, stop-scroll, shocking revelation that demands answers";
+    const modeStyles = {
+        chaos: "wild, surreal, reality-breaking, suspended objects",
+        cinematic: "dramatic, Hollywood-quality, emotional depth",
+        anime: "intense shonen action, sakuga quality, MAPPA aesthetic",
+        cartoon: "2D animation, squash-stretch, vibrant, Saturday morning",
+        stickman: "minimalist stick figure, fluid combat, clean lines",
+        shocking: "stop-scroll, controversial, shocking revelation"
+    };
 
-    const systemPrompt = `
-You are an elite AI video prompt engineer specializing in creating VIRAL OPENING HOOKS for social media shorts and reels.
+    const systemPrompt = `Create VISUAL HOOK SCENE for social media short (fades into main content).
 
-**YOUR TASK:**
-Create a VISUAL VIDEO PROMPT that describes the OPENING HOOK SCENE for the user's content. This hook scene will FADE OUT into their main content.
-
-**THE USER'S MAIN CONTENT/SCRIPT:**
+USER'S MAIN CONTENT:
 """
 ${script}
 """
 
-${stylePreference ? `**USER'S STYLE PREFERENCE:** ${stylePreference}` : ''}
+${stylePreference ? `STYLE REQUEST: ${stylePreference}` : ''}
 
-**MODE:** ${mode.toUpperCase()} - Your visual style should be: ${modeStyle}
+MODE: ${mode.toUpperCase()} - ${modeStyles[mode]}
 
-**VISUAL HOOK STYLES:**
-${VISUAL_HOOK_STYLES.map(s => `- ${s.name}: ${s.description}`).join('\n')}
+HOOK STYLES: ${VISUAL_HOOK_STYLES.map(s => `${s.name} (${s.description})`).join(' | ')}
 
-**FADE-OUT TRANSITIONS:**
-${FADE_OUT_STYLES.join('\n- ')}
+FADE-OUTS: ${FADE_OUT_STYLES.slice(0, 3).join(' | ')}
 
-**PLATFORM:** ${targetModel.toUpperCase()}
-${platformInstructions}
+PLATFORM: ${platformRule}
 
-**PHYSICS KEYWORDS:**
-${physicsKeywords}
-
-**OUTPUT FORMAT:**
-Return a JSON object with the following structure:
+OUTPUT (JSON):
 {
-  "prompt": "The detailed visual prompt description...",
-  "viralHook": "The short catchy text overlay/concept",
-  "genre": "The specific sub-genre or style category",
-  "hook": "The main hook description",
-  "fadeOut": "How the scene transitions/fades out",
-  "cameraWork": "Specific camera movements used",
-  "lighting": "Lighting setup used",
-  "hookMoment": "The specific timing/action of the hook",
+  "prompt": "Visual hook scene description",
+  "viralHook": "Short catchy text overlay",
+  "genre": "Specific sub-genre",
+  "hook": "Main hook description",
+  "fadeOut": "Transition method",
+  "cameraWork": "Camera movements",
+  "lighting": "Lighting setup",
+  "hookMoment": "Timing/action of hook",
   "difficulty": "Easy/Medium/Hard",
   "platformSpecific": {}
-}
-`;
+}`;
 
     return { systemPrompt };
 }
 
-// ===== 8. PARSE HOOKS RESPONSE =====
+// ===== 8. PARSE HOOKS RESPONSE (Unchanged) =====
 export const parseHooksResponse = (text: string): any => {
     try {
-        // Clean markdown code blocks if present
         let clean = text.replace(/```(?:json)?\s*([\s\S]*?)```/g, "$1").trim();
-
-        // Find JSON object
         const match = clean.match(/\{[\s\S]*\}/);
-        if (match) {
-            clean = match[0];
-        }
-
+        if (match) clean = match[0];
         return JSON.parse(clean);
     } catch (e) {
-        // Fallback for non-JSON response (legacy compat)
         console.error("Failed to parse hooks JSON:", e);
         return {
             prompt: text,

@@ -1,462 +1,319 @@
 /**
- * SCENARIO DATA LIBRARY (2026)
- * Contains all predefined viral scenarios and hook styles.
+ * COMPRESSED SCENARIO TEMPLATES (2026)
+ * Removed redundant fields, kept creative direction
  */
 
-// ===== CINEMATIC SCENARIOS =====
+// ===== CINEMATIC SCENARIOS (COMPRESSED) =====
 export const cinematicScenarios = [
     {
         category: "Main Character Moment",
         template: (subject: string) => ({
-            photoPlacement: `${subject} centered in frame, confident expression, slight wind movement.`,
-            cinematicAction: `Slow motion, dramatic lighting change from dark to golden hour, anamorphic lens flares hitting the subject.`,
-            cameraWork: "Slow dolly push-in, shallow depth of field, background bokeh",
-            mood: "Heroic, empowering, 'that's the moment they became the protagonist'",
-            platform: "Veo 3 (Photorealism), Runway Gen-4",
+            photoPlacement: `${subject} centered, confident, slight wind`,
+            cinematicAction: `Slow motion, dark to golden hour transition, anamorphic flares`,
+            cameraWork: "Slow dolly push-in, shallow DOF, bokeh background",
+            mood: "Heroic empowerment",
             viralHook: "Every frame is a painting 🎬",
-            aesthetic: "Nolan-style blockbuster, IMAX format",
-            expectedViews: "2-5M views",
+            expectedViews: "2-5M",
             difficulty: "Easy",
-            estimatedTime: "5 mins (Veo) + 3 mins post",
-            postProcessing: "Color grade: Teal shadows, Orange highlights. Add 'Interstellar' style soundtrack.",
-            commonIssues: "Face consistency can drop in wide shots - keep camera close."
+            estimatedTime: "5 mins + 3 post",
+            postProcessing: "Teal shadows, orange highlights, Interstellar soundtrack"
         })
     },
     {
         category: "South Indian Mass Entry",
         template: (subject: string) => ({
-            photoPlacement: `${subject} standing in silhouette against a massive dust storm, back turned then slowly turning.`,
-            cinematicAction: `Dust and smoke billow around the subject, strong rim lighting creates a golden halo. Debris floats in slow motion.`,
-            cameraWork: "Low angle 'Hero Shot', rapid zoom-in (crash zoom), slow motion walk",
-            mood: "Hype, powerful, mass appeal, larger than life",
-            platform: "Kling (Motion control), Runway",
+            photoPlacement: `${subject} silhouette against dust storm, slow turn`,
+            cinematicAction: `Dust billows, rim lighting golden halo, debris slow-mo`,
+            cameraWork: "Low angle hero shot, crash zoom, slow walk",
+            mood: "Hype, mass appeal, larger than life",
             viralHook: "Goosebumps guaranteed 🔥",
-            aesthetic: "High contrast, backlit smoke, warm color grading (Teal & Orange)",
-            expectedViews: "10-50M views (Viral in India)",
+            expectedViews: "10-50M",
             difficulty: "Medium",
-            estimatedTime: "10 mins (Kling) + 5 mins post",
-            postProcessing: "Add 'Mass BGM' (heavy drums). Ramping speed effect (slow -> fast -> slow).",
-            commonIssues: "Smoke can obscure subject - specify 'rim lighting' to keep silhouette clear."
+            estimatedTime: "10 mins + 5 post",
+            postProcessing: "Mass BGM heavy drums, ramping speed (slow→fast→slow)"
         })
     },
     {
-        category: "Royal Rajasthani Aesthetic",
+        category: "Royal Rajasthani",
         template: (subject: string) => ({
-            photoPlacement: `${subject} framed by an intricate sandstone Jharokha (archway), bathed in golden light.`,
-            cinematicAction: `Soft curtains blowing in the wind, pigeons flying in background, sun rays (god rays) filtering through the arch.`,
-            cameraWork: "Smooth gimbal tracking shot through the archway, revealing the subject",
-            mood: "Regal, timeless, traditional elegance",
-            platform: "Veo 3 (Detail), Kling",
+            photoPlacement: `${subject} framed by sandstone Jharokha, golden light`,
+            cinematicAction: `Curtains blowing, pigeons flying, sun rays filtering through arch`,
+            cameraWork: "Gimbal tracking through archway",
+            mood: "Regal, timeless elegance",
             viralHook: "Royalty vibes 👑",
-            aesthetic: "Saffron and Gold palette, intricate patterns, soft diffused daylight",
-            expectedViews: "5-15M views",
+            expectedViews: "5-15M",
             difficulty: "Medium",
-            estimatedTime: "12 mins (Veo) + 8 mins post",
-            postProcessing: "Add 'Padmaavat' style classical score. Enhance gold tones in grading.",
-            commonIssues: "Intricate patterns can blur - use 'high resolution' and 'sharp focus' keywords."
+            estimatedTime: "12 mins + 8 post",
+            postProcessing: "Padmaavat classical score, enhance gold tones"
         })
     },
     {
-        category: "Bollywood Romance",
+        category: "Bollywood 90s Romance",
         template: (subject: string) => ({
-            photoPlacement: `${subject} in a vast mustard field, traditional vibe, looking into distance.`,
-            cinematicAction: "360-degree orbit camera, rose petals falling, warm 90s golden glow.",
-            cameraWork: "Crane up revealing vast landscape, Pro-Mist diffusion filter",
-            mood: "Romantic, nostalgic, 90s Bollywood vibes",
-            platform: "Kling (Orbit motion), Veo 3",
+            photoPlacement: `${subject} in mustard field, traditional, looking into distance`,
+            cinematicAction: "360° orbit, rose petals falling, warm golden glow",
+            cameraWork: "Crane up revealing landscape, Pro-Mist diffusion",
+            mood: "Romantic nostalgic 90s Bollywood",
             viralHook: "Udit Narayan in my head 🎵",
-            aesthetic: "Kodak 500T film, 3200K warmth",
-            expectedViews: "5-10M views",
+            expectedViews: "5-10M",
             difficulty: "Medium",
-            estimatedTime: "8 mins (Kling) + 5 mins post",
-            postProcessing: "Add romantic strings BGM. Apply soft glow filter.",
-            commonIssues: "Orbit motion can distort faces - keep rotation slow."
+            estimatedTime: "8 mins + 5 post",
+            postProcessing: "Romantic strings BGM, soft glow filter"
         })
     }
 ];
 
-// ===== SHOCKING SCENARIOS =====
+// ===== SHOCKING SCENARIOS (COMPRESSED - Top 5) =====
 export const viralShockScenarios = [
     {
         category: "Amusement Park Free Fall",
         template: (subject: string) => ({
-            photoPlacement: `${subject} positioned center frame, looking calm/casual.`,
-            shockAction: `A massive free-fall amusement park ride suddenly descends rapidly from above, directly behind the subject.`,
-            cameraWork: "Static front-facing shot, sudden zoom out reveals ride approaching",
-            timing: "0-2s: Subject static → 2-3s: Zoom out reveals ride → 3-4s: IMPACT from above → Video cuts",
-            physicsDetails: "Ride shadow grows larger, wind blows upward, subject looks up last second",
-            platform: "Kling (Motion Brush on ride), Runway (Camera zoom)",
+            photoPlacement: `${subject} center frame, calm/casual`,
+            shockAction: `Massive free-fall ride descends rapidly from above behind subject`,
+            timing: "0-2s static → 2-3s zoom reveals ride → 3-4s impact → cut",
+            physicsDetails: "Shadow grows, wind blows upward, subject looks up last second",
             viralHook: "Wait for it 💀",
-            viewsRange: "5-20M views",
+            viewsRange: "5-20M",
             difficulty: "Medium",
-            estimatedTime: "10 mins (Kling) + 5 mins post",
-            postProcessing: "Add mechanical whirring sound (2s) and massive slam impact sound (4s). Cut to black instantly on impact.",
-            commonIssues: "Ride may descend too slowly - increase Motion Brush strength to max."
+            estimatedTime: "10 mins + 5 post",
+            postProcessing: "Mechanical whir (2s), massive slam (4s), cut black instantly"
         })
     },
     {
-        category: "Car Drift Behind Back",
+        category: "Car Drift Behind",
         template: (subject: string) => ({
-            photoPlacement: `${subject} standing on an empty street, unaware of surroundings.`,
-            shockAction: `A sports car drifts sideways behind the subject, tires smoking, inches from impact.`,
-            cameraWork: "Front angle locked on subject, car enters frame from side blurred then sharp",
-            timing: "0-2s: Subject posing → 2-3s: Engine sound builds → 3-4s: Drift car slides behind → Cut at closest point",
-            physicsDetails: "Tire smoke fills background, wind from car blows clothes/hair, slight reaction at end",
-            platform: "Runway Gen-4 (Best for vehicle motion), Kling",
+            photoPlacement: `${subject} standing empty street, unaware`,
+            shockAction: `Sports car drifts sideways behind, tires smoking, inches from impact`,
+            timing: "0-2s posing → 2-3s engine builds → 3-4s drift slide → cut at closest",
+            physicsDetails: "Tire smoke fills background, wind blows clothes/hair, slight reaction",
             viralHook: "Bro didn't even notice 😭",
-            viewsRange: "10-30M views",
+            viewsRange: "10-30M",
             difficulty: "Hard",
-            estimatedTime: "15 mins (Runway) + 10 mins post",
-            postProcessing: "Layer intense tire screech audio + V10 engine rev. Add camera shake on pass-by.",
-            commonIssues: "Car may blend into person - use separate layers or Motion Brush with strict masking."
+            estimatedTime: "15 mins + 10 post",
+            postProcessing: "Tire screech + V10 rev, camera shake on pass"
         })
     },
     {
         category: "Lightning Strike Miss",
         template: (subject: string) => ({
-            photoPlacement: `${subject} outdoors, normal lighting, calm atmosphere.`,
-            shockAction: `A massive lightning bolt strikes the ground 2 feet beside the subject, creating a blinding flash.`,
-            cameraWork: "Static medium shot, sudden white flash fills 80% of frame, camera shake",
-            timing: "0-2s: Overcast sky, calm → 2s: Thunder rumble → 3s: LIGHTNING STRIKE → 4s: Smoke clears, subject shocked",
-            physicsDetails: "Ground explosion, dirt particles, electrical sparks, hair/fur stands up from static",
-            platform: "Veo 3 (Best physics), Runway",
+            photoPlacement: `${subject} outdoors, normal lighting, calm`,
+            shockAction: `Lightning bolt strikes ground 2 feet beside subject, blinding flash`,
+            timing: "0-2s overcast calm → 2s rumble → 3s STRIKE → 4s smoke clears, shocked",
+            physicsDetails: "Ground explosion, dirt particles, sparks, hair stands from static",
             viralHook: "God said NOT TODAY 😱",
-            viewsRange: "15-40M views",
+            viewsRange: "15-40M",
             difficulty: "Medium",
-            estimatedTime: "8 mins (Veo) + 2 mins post",
-            postProcessing: "Add thunder crack sound (exact sync with flash). Increase brightness/contrast on impact frame.",
-            commonIssues: "Flash may wash out entire image - reduce flash duration in prompt."
+            estimatedTime: "8 mins + 2 post",
+            postProcessing: "Thunder crack (sync with flash), boost brightness on impact"
         })
     },
     {
-        category: "Plane Engine Explodes",
+        category: "Gas Station Fire",
         template: (subject: string) => ({
-            photoPlacement: `${subject} near a window (implied plane interior), neutral expression.`,
-            shockAction: `The plane engine visible outside the window explodes into an orange fireball, sending debris flying.`,
-            cameraWork: "Interior close-up on subject, window view shows engine, sudden explosion reflection on subject",
-            timing: "0-2s: Cruising altitude, calm → 2s: Engine sputters → 3s: MASSIVE EXPLOSION → 4s: Flames visible",
-            physicsDetails: "Window cracks spiderweb pattern, cabin shakes, oxygen masks drop, subject grabs support",
-            platform: "Kling (Complex motion), Veo 3",
-            viralHook: "Final Destination is real 💀",
-            viewsRange: "20-50M views",
-            difficulty: "Hard",
-            estimatedTime: "20 mins (Kling) + 10 mins post",
-            postProcessing: "Cabin alarm sound effect. Muffled explosion audio (as if heard through glass).",
-            commonIssues: "Reflection may look fake - ensure lighting matches the explosion source."
-        })
-    },
-    {
-        category: "Elevator Cable Snap",
-        template: (subject: string) => ({
-            photoPlacement: `${subject} inside a glass elevator, casual stance.`,
-            shockAction: `The elevator cable snaps, causing a 3-second free fall where the subject floats upward.`,
-            cameraWork: "Interior shot, subject center frame, camera follows fall motion, ceiling rushes down",
-            timing: "0-2s: Normal ride → 2s: Cable snap sound → 3-4s: FREE FALL, subject floats → 5s: Emergency brake",
-            physicsDetails: "Zero gravity effect, hair/loose items float up, G-force distortion on face",
-            platform: "Kling (Ragdoll physics), Luma",
-            viralHook: "My stomach dropped 😭",
-            viewsRange: "8-25M views",
-            difficulty: "Hard",
-            estimatedTime: "15 mins (Kling) + 5 mins post",
-            postProcessing: "Metal snap sound + rushing wind. Add 'camera drop' shake effect.",
-            commonIssues: "Zero-G physics is tricky - emphasize 'floating hair and objects' in prompt."
-        })
-    },
-    {
-        category: "Truck Tire Blowout",
-        template: (subject: string) => ({
-            photoPlacement: `${subject} on a sidewalk, side profile, normal environment.`,
-            shockAction: `An 18-wheeler truck tire explodes beside the subject on the road, with rubber shrapnel flying.`,
-            cameraWork: "Side tracking shot following subject, truck in background, sudden explosion and debris",
-            timing: "0-2s: Calm → 2-3s: Tire pressure builds → 3-4s: EXPLOSION, subject flinches → 5s: Debris raining",
-            physicsDetails: "Tire rubber chunks fly past, smoke burst, subject flinches and covers up, car alarms trigger",
-            platform: "Runway Gen-4 (Particle effects), Veo 3",
-            viralHook: "Death missed by 2 feet 💀",
-            viewsRange: "12-35M views",
+            photoPlacement: `${subject} near gas pump, standing normally`,
+            shockAction: `Pump nozzle sparks, ignites ground fuel, flames race toward subject`,
+            timing: "0-2s normal → 2s spark → 3-4s flames spread → 4s react/retreat",
+            physicsDetails: "Ground fire spreads realistic pattern, subject drops items/stumbles",
+            viralHook: "Final Destination unlocked 💀",
+            viewsRange: "18-50M",
             difficulty: "Medium",
-            estimatedTime: "10 mins (Runway) + 5 mins post",
-            postProcessing: "Loud explosion sound + ear ringing tone after. Car alarms going off in distance.",
-            commonIssues: "Smoke may obscure subject - keep explosion targeted to tire area."
-        })
-    },
-    {
-        category: "Chandelier Drop",
-        template: (subject: string) => ({
-            photoPlacement: `${subject} indoors (restaurant/hall), looking down or away.`,
-            shockAction: `A massive crystal chandelier falls from the ceiling directly above the subject, stopping 1 foot from impact.`,
-            cameraWork: "Top-down angle showing chandelier, then cut to side angle as it falls",
-            timing: "0-2s: Calm scene → 2s: Ceiling crack sound → 3-4s: Chandelier plummets → 4s: Stops mid-air, chain catches",
-            physicsDetails: "Glass crystals shatter and scatter, table shakes from impact shockwave, objects tip over",
-            platform: "Kling (Precise motion control), Veo 3",
-            viralHook: "Guardian angel working overtime 😇",
-            viewsRange: "10-30M views",
-            difficulty: "Hard",
-            estimatedTime: "15 mins (Kling) + 5 mins post",
-            postProcessing: "Glass tinkling sounds. Heavy thud but no crash. Crowd gasp audio.",
-            commonIssues: "Chandelier physics complex - focus on the 'sudden stop' motion."
-        })
-    },
-    {
-        category: "Balcony Railing Breaks",
-        template: (subject: string) => ({
-            photoPlacement: `${subject} leaning on a high-rise balcony railing, looking at view.`,
-            shockAction: `The railing suddenly snaps, the subject starts falling forward but grabs the ledge last second.`,
-            cameraWork: "Behind subject, railing in frame, sudden tilt as railing breaks, camera follows fall motion",
-            timing: "0-2s: Leaning calmly → 2s: Metal creak sound → 3s: Railing BREAKS → 4s: Subject catches ledge, hanging",
-            physicsDetails: "Railing bolts pop out, subject's weight shifts forward, legs dangle over edge, realistic fear",
-            platform: "Runway (Camera control), Kling",
-            viralHook: "Why did I watch this before bed 💀",
-            viewsRange: "15-45M views",
-            difficulty: "Hard",
-            estimatedTime: "20 mins (Runway) + 10 mins post",
-            postProcessing: "Metal screech sound. Wind noise increases. Heartbeat sound effect.",
-            commonIssues: "Ensure 'grabbing ledge' action is clear - use multiple keyframes."
-        })
-    },
-    {
-        category: "Gas Station Fire Start",
-        template: (subject: string) => ({
-            photoPlacement: `${subject} near a gas pump, standing normally.`,
-            shockAction: `The gas pump nozzle sparks, igniting fuel on the ground, flames race toward the subject.`,
-            cameraWork: "Security camera angle, wide shot showing subject and pumps, sudden orange glow spreads",
-            timing: "0-2s: Normal scene → 2s: Spark ignition → 3-4s: Flames spread rapidly → 4s: Subject reacts/retreats",
-            physicsDetails: "Ground fire spreads in realistic pattern, subject drops items/stumbles back",
-            platform: "Veo 3 (Fire physics), Runway",
-            viralHook: "Bro unlocked Final Destination 💀",
-            viewsRange: "18-50M views",
-            difficulty: "Medium",
-            estimatedTime: "12 mins (Veo) + 5 mins post",
-            postProcessing: "Metallic scrape (2s), Fire whoosh (2.3s), Explosion bass (4.3s). Add heat distortion in post.",
-            commonIssues: "Fire spread too fast - reduce motion speed to 60%."
+            estimatedTime: "12 mins + 5 post",
+            postProcessing: "Metallic scrape (2s), fire whoosh (2.3s), bass drop (4.3s), heat distortion"
         })
     },
     {
         category: "Subway Train Near Miss",
         template: (subject: string) => ({
-            photoPlacement: `${subject} on subway platform edge, distracted.`,
-            shockAction: `An express train barrels past at 100mph, wind blows the subject backward inches from the face.`,
-            cameraWork: "Platform-level shot, subject in foreground, train enters frame at extreme speed with motion blur",
-            timing: "0-2s: Waiting → 2-3s: Rumble intensifies → 3-4s: Train BLASTS past → 4s: Subject stumbles back",
-            physicsDetails: "Wind tunnel effect, clothes/paper whip violently, subject covers face",
-            platform: "Kling (Motion blur), Runway Gen-4",
+            photoPlacement: `${subject} on platform edge, distracted`,
+            shockAction: `Express train barrels past 100mph, wind blows subject backward`,
+            timing: "0-2s waiting → 2-3s rumble → 3-4s train BLASTS → 4s stumbles back",
+            physicsDetails: "Wind tunnel, clothes/paper whip violently, covers face",
             viralHook: "NYC different 😭",
-            viewsRange: "10-28M views",
+            viewsRange: "10-28M",
             difficulty: "Medium",
-            estimatedTime: "10 mins (Kling) + 5 mins post",
-            postProcessing: "Metro rumble sound. Intense wind whoosh. Distorted announcement.",
-            commonIssues: "Train speed can look fake - use 'motion blur' and 'camera shake' keywords."
+            estimatedTime: "10 mins + 5 post",
+            postProcessing: "Metro rumble, intense wind whoosh, distorted announcement"
         })
     }
 ];
 
-// ===== 3. CHAOS MODE SCENARIOS (2026 UPDATED) =====
+// ===== CHAOS SCENARIOS (COMPRESSED) =====
 export const chaosScenarios = [
     {
         category: "Bodycam Comedy",
         template: (subject: string) => ({
-            visualStyle: "Bodycam POV, fish-eye distortion, shaky movement",
-            chaosAction: `Police bodycam footage of a traffic stop, but the driver is ${subject} wearing professional business attire. ${subject} presents a tiny briefcase and negotiates with serious legal jargon.`,
-            viralHook: "POV: You pulled over a professional taco.",
-            postProcessing: "Add radio static and muffled dialogue.",
+            visualStyle: "Bodycam POV, fish-eye, shaky, REC overlay",
+            chaosAction: `Police bodycam of traffic stop, but driver is ${subject} in business suit, presents tiny briefcase, negotiates with legal jargon`,
+            viralHook: "POV: You pulled over a professional taco",
             difficulty: "Hard",
-            estimatedTime: "25 mins"
+            estimatedTime: "25 mins",
+            postProcessing: "Radio static, muffled dialogue"
         })
     },
     {
         category: "Character Role Swap",
         template: (subject: string) => ({
-            visualStyle: "Cinematic, high-budget movie scene",
-            chaosAction: `Darth Vader in a flight attendant uniform, calmly walking down the aisle of a commercial airplane, demonstrating safety procedures with ${subject}.`,
-            viralHook: "The Dark Side has snack service.",
-            postProcessing: "Heavy breathing sound effects.",
+            visualStyle: "Cinematic, high-budget movie",
+            chaosAction: `Darth Vader in flight attendant uniform, walking airplane aisle, demonstrating safety with ${subject}`,
+            viralHook: "The Dark Side has snack service",
             difficulty: "Medium",
-            estimatedTime: "15 mins"
+            estimatedTime: "15 mins",
+            postProcessing: "Heavy breathing SFX"
         })
     },
     {
         category: "Sentient Interaction",
         template: (subject: string) => ({
-            visualStyle: "Dreamcore, hazy, surreal lighting",
-            chaosAction: `A professional lawyer in a 90s wood-paneled office, intensely negotiating a contract with ${subject}. ${subject} is sentient and has a small mustache.`,
-            viralHook: "My lawyer is a potato (and he's winning).",
-            postProcessing: "Add 90s film grain and soft highlight rolloff.",
+            visualStyle: "Dreamcore, hazy, surreal",
+            chaosAction: `Professional lawyer in 90s office, negotiating contract with ${subject}. ${subject} is sentient with small mustache`,
+            viralHook: "My lawyer is a potato (and winning)",
             difficulty: "Hard",
-            estimatedTime: "20 mins"
+            estimatedTime: "20 mins",
+            postProcessing: "90s film grain, soft highlights"
         })
     },
     {
-        category: "Wabi-Sabi Perfection",
+        category: "Wabi-Sabi Loop",
         template: (subject: string) => ({
-            visualStyle: "January 2026 Trend: Wabi-sabi celebrating imperfections",
-            chaosAction: `${subject} slowly breaking and repairing itself with liquid gold in a loop (Kintsugi logic). Beautiful, flawed, and hypnotic.`,
-            viralHook: "Flaws are the feature.",
-            postProcessing: "Slow motion, golden glow effects.",
+            visualStyle: "Wabi-sabi aesthetic celebrating imperfection",
+            chaosAction: `${subject} slowly breaking and repairing with liquid gold (Kintsugi), looping, beautiful flawed hypnotic`,
+            viralHook: "Flaws are the feature",
             difficulty: "Medium",
-            estimatedTime: "12 mins"
+            estimatedTime: "12 mins",
+            postProcessing: "Slow motion, golden glow"
         })
     }
 ];
 
-// ===== ANIME SCENARIOS =====
+// ===== ANIME SCENARIOS (COMPRESSED) =====
 export const animeScenarios = [
     {
         category: "Shonen Power Up",
         template: (subject: string) => ({
-            photoPlacement: `${subject} standing resolute, fists clenched at sides.`,
-            animeAction: `Intense glowing blue aura erupts around subject, ground cracks beneath feet, hair floats upward, electrical sparks crackle.`,
-            cameraWork: "Dutch angle looking up, camera shake on power burst, radial speed lines",
-            visualStyle: "MAPPA studio style, high contrast, vivid saturation, cel-shaded",
-            platform: "Kling AI 2.6 (Anime Mode)",
+            photoPlacement: `${subject} standing resolute, fists clenched`,
+            animeAction: `Glowing blue aura erupts, ground cracks beneath feet, hair floats, electrical sparks`,
+            cameraWork: "Dutch angle looking up, shake on burst, radial speed lines",
+            visualStyle: "MAPPA style, high contrast, vivid, cel-shaded",
             viralHook: "Domain Expansion 🤞",
-            expectedViews: "5-15M views",
+            expectedViews: "5-15M",
             difficulty: "Medium",
-            estimatedTime: "8 mins (Kling) + 5 mins post",
-            postProcessing: "Add energy aura overlay. Crank up contrast and saturation.",
-            commonIssues: "Aura can obscure face - keep facial expression fierce and visible."
+            estimatedTime: "8 mins + 5 post",
+            postProcessing: "Energy aura overlay, crank contrast/saturation"
         })
     },
     {
-        category: "Sakuga Combat Strike",
+        category: "Sakuga Combat",
         template: (subject: string) => ({
-            photoPlacement: `${subject} in dynamic mid-air combat pose.`,
-            animeAction: `Subject unleashes a devastating punch with impact frames (black and white flash), shockwave ripples through air.`,
-            cameraWork: "Dynamic tracking cam, smash zoom on impact, motion blur",
-            visualStyle: "Ufotable style, particle effects, fluid animation, 2D aesthetic",
-            platform: "Runway Gen-4 (Motion)",
-            viralHook: "That animation budget though 💸",
-            expectedViews: "8-20M views",
+            photoPlacement: `${subject} mid-air combat pose`,
+            animeAction: `Devastating punch with impact frames (B&W flash), shockwave ripples air`,
+            cameraWork: "Dynamic tracking, smash zoom on impact, motion blur",
+            visualStyle: "Ufotable style, particle effects, fluid 2D",
+            viralHook: "That animation budget 💸",
+            expectedViews: "8-20M",
             difficulty: "Hard",
-            estimatedTime: "15 mins (Runway) + 5 mins post",
-            postProcessing: "Add impact sound/bass drop. Flash white frame on hit.",
-            commonIssues: "Motion blur can look messy - specify 'sharp outlines' and 'sakuga style'."
+            estimatedTime: "15 mins + 5 post",
+            postProcessing: "Impact sound/bass, flash white frame on hit"
         })
     },
     {
-        category: "Slice of Life Moment",
+        category: "Slice of Life",
         template: (subject: string) => ({
-            photoPlacement: `${subject} sitting by a window, soft rain outside.`,
-            animeAction: `Subject gently turns to look at camera, soft smile, hair sways in breeze, warm light hits dust motes.`,
-            cameraWork: "Static medium shot with subtle zoom, focus pull",
-            visualStyle: "Kyoto Animation style, soft edges, emotional lighting, high detail eyes",
-            platform: "Veo 3 (2D Animation)",
+            photoPlacement: `${subject} by window, soft rain outside`,
+            animeAction: `Gently turns to camera, soft smile, hair sways in breeze, warm light hits dust motes`,
+            cameraWork: "Static medium with subtle zoom, focus pull",
+            visualStyle: "KyoAni style, soft edges, emotional lighting, detailed eyes",
             viralHook: "Main character energy ✨",
-            expectedViews: "2-8M views",
+            expectedViews: "2-8M",
             difficulty: "Easy",
-            estimatedTime: "5 mins (Veo) + 2 mins post",
-            postProcessing: "Lo-fi hip hop track. Soft glow filter.",
-            commonIssues: "Eyes must be perfect - use 'highly detailed expressive anime eyes'."
+            estimatedTime: "5 mins + 2 post",
+            postProcessing: "Lo-fi hip hop, soft glow"
         })
     }
 ];
 
-// ===== CARTOON SCENARIOS =====
+// ===== CARTOON SCENARIOS (COMPRESSED) =====
 export const cartoonScenarios = [
     {
         category: "Rubber Hose Dance",
         template: (subject: string) => ({
-            photoPlacement: `${subject} styled as a 1930s cartoon character.`,
-            cartoonAction: `Subject performs a bouncy, rhythmic dance with rubbery limbs, bouncing up and down to the beat.`,
-            cameraWork: "Static wide shot, slight film grain texture",
-            visualStyle: "Fleischer Studios style, black and white, pie-cut eyes, simplistic",
-            platform: "Runway Gen-4 (Style Ref)",
+            photoPlacement: `${subject} as 1930s cartoon character`,
+            cartoonAction: `Bouncy rhythmic dance, rubbery limbs, bouncing to beat`,
+            cameraWork: "Static wide, slight film grain",
+            visualStyle: "Fleischer style, B&W, pie-cut eyes",
             viralHook: "Vintage vibes 📺",
-            expectedViews: "3-10M views",
+            expectedViews: "3-10M",
             difficulty: "Medium",
-            estimatedTime: "10 mins (Runway) + 3 mins post",
-            postProcessing: "Add old film scratch overlay. Ragtime piano music.",
-            commonIssues: "Limbs can get too distorted - keep character design simple."
+            estimatedTime: "10 mins + 3 post",
+            postProcessing: "Film scratch overlay, ragtime piano"
         })
     },
     {
         category: "Saturday Morning Action",
         template: (subject: string) => ({
-            photoPlacement: `${subject} running towards camera, determined expression.`,
-            cartoonAction: `Subject runs with exaggerated speed lines, jumps over an obstacle with 'squash and stretch' deformation.`,
-            cameraWork: "Tracking shot, low angle, fast paced",
-            visualStyle: "90s X-Men/Spiderman cartoon style, bold thick outlines, flat shading",
-            platform: "Kling AI (Cartoon Mode)",
-            viralHook: "Nostalgia hit hard ⚡",
-            expectedViews: "5-12M views",
+            photoPlacement: `${subject} running toward camera, determined`,
+            cartoonAction: `Runs with speed lines, jumps obstacle with squash-stretch`,
+            cameraWork: "Tracking low angle, fast",
+            visualStyle: "90s X-Men style, bold outlines, flat shading",
+            viralHook: "Nostalgia hit ⚡",
+            expectedViews: "5-12M",
             difficulty: "Medium",
-            estimatedTime: "8 mins (Kling) + 2 mins post",
-            postProcessing: "Rock guitar intro. Boost vibrance.",
-            commonIssues: "3D rendering drift - enforce '2D flat shading' in prompt."
-        })
-    },
-    {
-        category: "Doraemon Gadget Reveal",
-        template: (subject: string) => ({
-            photoPlacement: `${subject} holding a futuristic gadget, wide eyed wonder.`,
-            cartoonAction: `Subject pulls a giant glowing object out of a small pocket, background turns into colorful starburst pattern.`,
-            cameraWork: "Zoom out to reveal object size, simple composition",
-            visualStyle: "Doraemon/Fujiko F. Fujio style, rounded shapes, primary colors, simple background",
-            platform: "Veo 3",
-            viralHook: "I need this gadget 🤖",
-            expectedViews: "4-15M views",
-            difficulty: "Easy",
-            estimatedTime: "6 mins (Veo) + 2 mins post",
-            postProcessing: "Sound effect: 'Ta-da!' fanfare. Bright joyful music.",
-            commonIssues: "Colors must be flat - 'no gradients' is key."
+            estimatedTime: "8 mins + 2 post",
+            postProcessing: "Rock guitar intro, boost vibrance"
         })
     }
 ];
 
-// ===== STICKMAN SCENARIOS =====
+// ===== STICKMAN SCENARIOS (COMPRESSED) =====
 export const stickmanScenarios = [
     {
-        category: "Stickman Parkour",
+        category: "Parkour",
         template: (subject: string) => ({
-            photoPlacement: `Black stick figure on pure white background.`,
-            stickmanAction: `Stick figure runs, wall-jumps off screen edge, does a backflip, and lands in superhero pose.`,
-            cameraWork: "Side scrolling view, fluid follow cam",
-            visualStyle: "Alan Becker / Pivot Animator style, minimalist black lines, smooth motion",
-            platform: "Runway Gen-4 (Motion Brush)",
+            photoPlacement: `Black stick figure, white background`,
+            stickmanAction: `Runs, wall-jumps off edge, backflips, lands superhero pose`,
+            cameraWork: "Side scrolling, fluid follow",
+            visualStyle: "Alan Becker style, minimalist, smooth",
             viralHook: "Parkour pro 🏃‍♂️",
-            expectedViews: "10-25M views",
-            difficulty: "Hard (Simplicity is hard for AI)",
-            estimatedTime: "15 mins (Runway) + 5 mins post",
-            postProcessing: "Add 'whoosh' sounds for jumps. Keep audio minimal.",
-            commonIssues: "AI adds details/faces - negative prompt 'realism, face, clothes' aggressively."
+            expectedViews: "10-25M",
+            difficulty: "Hard",
+            estimatedTime: "15 mins + 5 post",
+            postProcessing: "Whoosh sounds for jumps"
         })
     },
     {
-        category: "Stickman Epic Fight",
+        category: "Epic Fight",
         template: (subject: string) => ({
-            photoPlacement: `Two stick figures (one Red, one Blue) facing off.`,
-            stickmanAction: `Red figure throws a fireball, Blue figure dodges with Matrix-style lean and counters with a high kick.`,
-            cameraWork: "Static wide shot to show action clarity",
-            visualStyle: "Xiao Xiao flash animation style, fast paced, impact effects are simple lines",
-            platform: "Kling AI",
+            photoPlacement: `Two stick figures (Red vs Blue) facing off`,
+            stickmanAction: `Red throws fireball, Blue Matrix-dodges and high kicks`,
+            cameraWork: "Static wide for action clarity",
+            visualStyle: "Xiao Xiao style, fast, simple impact lines",
             viralHook: "Top 10 Anime Battles ⚔️",
-            expectedViews: "8-30M views",
+            expectedViews: "8-30M",
             difficulty: "Hard",
-            estimatedTime: "12 mins (Kling) + 5 mins post",
-            postProcessing: "8-bit fighting sounds. Impact stars overlay.",
-            commonIssues: "Figures blending together - keep colors distinct (Red vs Blue)."
+            estimatedTime: "12 mins + 5 post",
+            postProcessing: "8-bit fight sounds, impact stars"
         })
     }
 ];
 
-
-// ===== HOOK STYLES (Text/Script) =====
+// ===== HOOK STYLES (Unchanged - already minimal) =====
 export const VISUAL_HOOK_STYLES = [
-    { name: "Mystery Reveal", description: "Start with obscured/partial view, slowly reveal the unexpected" },
-    { name: "Shock Freeze", description: "Dramatic freeze frame at peak moment, then fade to context" },
-    { name: "POV Discovery", description: "First-person perspective discovering something unusual" },
-    { name: "Impossible Scene", description: "Physically impossible or surreal opening that demands explanation" },
-    { name: "Tension Build", description: "Slow zoom/push-in on subject with building suspense" },
-    { name: "Before/After Tease", description: "Show the dramatic 'after' state first, fade to setup" },
-    { name: "Chaos Freeze", description: "Freeze mid-action in chaotic moment, objects suspended" },
-    { name: "Time Stop", description: "Everything frozen except one element, creating intrigue" }
+    { name: "Mystery Reveal", description: "Obscured view, slow reveal unexpected" },
+    { name: "Shock Freeze", description: "Freeze peak moment, fade to context" },
+    { name: "POV Discovery", description: "First-person discovering unusual" },
+    { name: "Impossible Scene", description: "Physically impossible opening" },
+    { name: "Tension Build", description: "Slow zoom with building suspense" },
+    { name: "Before/After Tease", description: "Show 'after' first, fade to setup" },
+    { name: "Chaos Freeze", description: "Freeze mid-action, objects suspended" },
+    { name: "Time Stop", description: "Everything frozen except one element" }
 ];
 
 export const FADE_OUT_STYLES = [
-    "Slow dissolve to white/black as scene transitions",
-    "Zoom out with motion blur into next scene",
-    "Freeze frame with subtle vignette fade",
-    "Objects slowly defocus as camera pulls back",
-    "Light bloom effect consuming the frame",
-    "Quick whip pan transitioning to main content",
-    "Particles/dust settling as scene changes",
-    "Depth of field shift blurring the hook scene"
+    "Slow dissolve to white/black",
+    "Zoom out with motion blur",
+    "Freeze with vignette fade",
+    "Objects defocus, camera pulls",
+    "Light bloom consuming frame",
+    "Quick whip pan transition",
+    "Particles settling, scene changes",
+    "Depth shift blurring hook"
 ];

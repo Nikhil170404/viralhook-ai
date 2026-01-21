@@ -1,6 +1,6 @@
 /**
- * PLATFORM-SPECIFIC INSTRUCTIONS (2026 STANDARDS)
- * Optimized for current generation Model capabilities.
+ * PLATFORM-SPECIFIC RULES (2026)
+ * Compressed to essential constraints only
  */
 
 export const PLATFORMS = {
@@ -12,92 +12,66 @@ export const PLATFORMS = {
 
 export type PlatformType = typeof PLATFORMS[keyof typeof PLATFORMS];
 
-export const getKlingInstructions = () => `
-**KLING AI 2.6 PRO (4-Part Universal Structure):**
+// ===== COMPRESSED PLATFORM RULES =====
 
-**Optimal Word Count:** 60-100 words (5-7 distinct elements).
+export const PLATFORM_RULES = {
+    kling: {
+        wordCount: '60-100',
+        structure: 'Subject → Action → Context → Style',
+        critical: [
+            'End with motion stop: "then settles" / "comes to rest" / "slowing"',
+            'Use physics terms: "fluid dynamics", "realistic liquid", "fabric flows naturally"',
+            'Camera terms inverted: "tilt left" = "pan left"'
+        ],
+        avoid: 'Exact numbers (use "cluster", "flock")'
+    },
+    runway: {
+        wordCount: '20-50',
+        structure: '[Camera Movement]: [Scene]. [Details]. [Style].',
+        critical: [
+            'Describe outcomes not mechanics: "bounces" not "collision detection"',
+            'Never redescribe reference image',
+            'NO negative prompts (causes opposite effect)'
+        ],
+        avoid: 'Technical jargon, complex physics terms'
+    },
+    veo: {
+        wordCount: '300-400',
+        structure: '[00:00-00:0X] Action + behavior (timestamp sequencing)',
+        critical: [
+            'Use outcomes: "sparks scatter" not "particle simulation"',
+            'Describe audio: ambient noise, sound effects',
+            'Front-load detail (first 100 words most important)'
+        ],
+        avoid: 'Physics jargon (ragdoll, collision, etc)'
+    },
+    luma: {
+        wordCount: '3-4 natural sentences',
+        structure: 'Conversational flow with trajectory description',
+        critical: [
+            'Describe motion as arc/trajectory: "sweeps from left to right"',
+            'Excellent for loops and morphing',
+            'Natural language preferred'
+        ],
+        avoid: 'Robotic instruction style'
+    }
+} as const;
 
-**Syntax Structure:**
-Subject (2-3 details) → Action (Speed/Manner) → Context (3-5 elements) → Style (Camera/Lighting/Mood)
-
-**Critical Rules (2026):**
-1. **Motion Endpoints**: ALWAYS end with "then settles", "comes to rest", or "gradually slowing" to prevent 99% generation hangs.
-2. **Explicit Physics**: Unlike other models, Kling explicitly rewards physics keywords like "fluid dynamics", "realistic liquid dynamics", or "fabric flowing naturally".
-3. **Inverted Terminology**: "tilt left" = "pan left". Use specific camera specification from the start.
-4. **No Exact Numbers**: Use "a cluster" or "a flock" instead of "5".
-
-**Example Kling Prompt:**
-"Slow tracking shot. A 35-year-old woman with auburn hair in an emerald coat walks purposefully along an urban path at golden hour (Subject/Action). Autumn leaves scatter on pavement, ground-level mist (Context). Documentary realism, motion gradually slows as she reaching park bench (Style/Endpoint)."
-`;
-
-export const getRunwayInstructions = () => `
-**RUNWAY GEN-4 (The "Simplicity" Engine):**
-
-**Optimal Word Count:** 20-50 words (**Thrives on simplicity**).
-
-**Syntax Structure:**
-[Camera Movement]: [Establishing Scene]. [Additional Details]. [Style].
-
-**Critical Rules (2026):**
-1. **Describe Outcomes**: Use "Actor takes four steps to window, pauses" instead of technical jargon.
-2. **Behavioral Physics**: Describe "Objects impact and bounce" instead of "collision detection".
-3. **Information Hierarchy**: Lead with the critical element. Never redescribe what's in a reference image.
-4. **No Negative Prompts**: Focusing on what you DON'T want causes model confusion.
-
-**Example Runway Prompt:**
-"Tracking shot: The camera follows the cyclist from a low angle as they pedal steadily along the coastal highway. Golden hour lighting, cinematic look."
-`;
-
-export const getVeoInstructions = () => `
-**GOOGLE VEO 3.1 (Cinematic Verbosity):**
-
-**Optimal Word Count:** 300-400 words (Rewards front-loaded detail).
-
-**Syntax Structure:**
-Timestamp-based Sequencing: [00:00-00:0X] Camera action + Subject behavior.
-
-**Critical Features (2026):**
-1. **Emergent Physics**: NEVER use physics jargon (ragdoll/collision). Describe outcomes like "sparks scatter" or "water flows naturally".
-2. **Multi-Shot Sequencing**: Can handle complex sequences involving time-stamps.
-3. **Native Audio**: Describe sound effects and ambient noise as part of the prompt.
-
-**Example Veo Segment:**
-"[00:00-00:02] Wide crane shot of explorer in vast temple complex. [00:02-00:05] Camera dollies in to freckled face expressing awe. Audio: Wind whistling, distance stone scraping."
-`;
-
-export const getLumaInstructions = () => `
-**LUMA DREAM MACHINE RAY3 (Conversational Flow):**
-
-**Optimal Word Count:** 3-4 natural language sentences.
-
-**Critical Features (2026):**
-1. **Reasoning Mode**: The model "thinks" about your prompt flow—be conversational but precise.
-2. **Visual Annotation**: Describe motion as a trajectory (e.g., "Subject moves in a sweeping arc from camera left to right").
-3. **Fluidity**: Excellent for loops and morphing.
-
-**Example Luma Prompt:**
-"A vibrant street performer in a sequined outfit dances in a graffiti-adorned alley. The camera starts at a low angle capturing the fabric flow, then smoothly transitions to a wide shot showing the environment. Confetti falls around them as they finish with a dramatic pose."
-`;
-
-export const getNegativePrompt = (model: string) => {
+export function getPlatformRule(model: string): string {
     const m = model.toLowerCase();
+    const platform = m.includes('kling') ? 'kling'
+        : m.includes('runway') ? 'runway'
+            : m.includes('veo') ? 'veo'
+                : m.includes('luma') ? 'luma'
+                    : 'kling'; // default
 
-    // Runway HATES negative prompts - causes opposite effects
-    if (m.includes('runway')) return '';
+    const rules = PLATFORM_RULES[platform];
+    return `${rules.wordCount} words. ${rules.structure}
+Critical: ${rules.critical.join('; ')}
+Avoid: ${rules.avoid}`;
+}
 
-    const baseNegative = "distorted faces, morphing, unrealistic physics, floating objects, warping, blurry edges";
-
-    if (m.includes('kling')) {
-        return baseNegative + ", slow motion artifacts, flickering, jittery motion, frame stuttering, unnatural locomotion";
-    }
-
-    if (m.includes('luma')) {
-        return baseNegative + ", static frozen frame, no motion, stuck elements, physics violations";
-    }
-
-    if (m.includes('veo')) {
-        return baseNegative + ", low resolution, heavy compression, audio desync, muffled sound";
-    }
-
-    return baseNegative + ", low quality, amateur, unnatural";
-};
+export function getNegativePrompt(model: string): string {
+    if (model.toLowerCase().includes('runway')) return ''; // Runway breaks with negatives
+    return "distorted faces, morphing, unrealistic physics, floating objects, warping, blurry";
+}
