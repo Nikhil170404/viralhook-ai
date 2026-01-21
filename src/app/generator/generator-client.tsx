@@ -8,6 +8,7 @@ import { fetchWithCSRF } from "@/lib/api-client";
 import { AIInputWithLoading } from "@/components/ui/ai-input-with-loading";
 import { Navbar } from "@/components/ui/navbar";
 import { createBrowserClient } from "@supabase/ssr";
+import { useCredits } from "@/context/credits-context";
 
 type GeneratorClientProps = {
     initialSession: any;
@@ -20,6 +21,7 @@ export default function GeneratorClient({ initialSession }: GeneratorClientProps
     const [generatedResult, setGeneratedResult] = useState("");
     const [isCopied, setIsCopied] = useState(false);
     const [isShareCopied, setIsShareCopied] = useState(false);
+    const { decrementCredit } = useCredits();
 
     // Initialize Supabase client
     const supabase = createBrowserClient(
@@ -110,6 +112,9 @@ export default function GeneratorClient({ initialSession }: GeneratorClientProps
                                     });
 
                                     setGeneratedResult(data.prompt);
+
+                                    // Update credits in real-time
+                                    decrementCredit();
 
                                 } catch (e) {
                                     console.error("API Error", e);
