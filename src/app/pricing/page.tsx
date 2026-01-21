@@ -157,8 +157,8 @@ export default function PricingPage() {
                                 <button
                                     onClick={() => setCurrency('USD')}
                                     className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${currency === 'USD'
-                                            ? 'bg-white text-black'
-                                            : 'text-gray-400 hover:text-white'
+                                        ? 'bg-white text-black'
+                                        : 'text-gray-400 hover:text-white'
                                         }`}
                                 >
                                     $ USD
@@ -166,8 +166,8 @@ export default function PricingPage() {
                                 <button
                                     onClick={() => setCurrency('INR')}
                                     className={`px-4 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-1 ${currency === 'INR'
-                                            ? 'bg-white text-black'
-                                            : 'text-gray-400 hover:text-white'
+                                        ? 'bg-white text-black'
+                                        : 'text-gray-400 hover:text-white'
                                         }`}
                                 >
                                     ₹ INR <Globe className="w-3 h-3" />
@@ -179,8 +179,8 @@ export default function PricingPage() {
                                 <button
                                     onClick={() => setBillingCycle('monthly')}
                                     className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${billingCycle === 'monthly'
-                                            ? 'bg-white text-black'
-                                            : 'text-gray-400 hover:text-white'
+                                        ? 'bg-white text-black'
+                                        : 'text-gray-400 hover:text-white'
                                         }`}
                                 >
                                     Monthly
@@ -188,8 +188,8 @@ export default function PricingPage() {
                                 <button
                                     onClick={() => setBillingCycle('annual')}
                                     className={`px-4 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-2 ${billingCycle === 'annual'
-                                            ? 'bg-white text-black'
-                                            : 'text-gray-400 hover:text-white'
+                                        ? 'bg-white text-black'
+                                        : 'text-gray-400 hover:text-white'
                                         }`}
                                 >
                                     Annual
@@ -217,8 +217,8 @@ export default function PricingPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.1 }}
                                     className={`relative rounded-3xl p-1 ${plan.popular
-                                            ? 'bg-gradient-to-b from-purple-500 to-pink-500'
-                                            : 'bg-white/10'
+                                        ? 'bg-gradient-to-b from-purple-500 to-pink-500'
+                                        : 'bg-white/10'
                                         }`}
                                 >
                                     {plan.popular && (
@@ -232,22 +232,22 @@ export default function PricingPage() {
                                         <div className="flex items-center gap-3 mb-4">
                                             <div
                                                 className={`w-10 h-10 rounded-xl flex items-center justify-center ${plan.color === 'gray'
-                                                        ? 'bg-gray-800'
-                                                        : plan.color === 'blue'
-                                                            ? 'bg-blue-500/20'
-                                                            : plan.color === 'purple'
-                                                                ? 'bg-purple-500/20'
-                                                                : 'bg-orange-500/20'
+                                                    ? 'bg-gray-800'
+                                                    : plan.color === 'blue'
+                                                        ? 'bg-blue-500/20'
+                                                        : plan.color === 'purple'
+                                                            ? 'bg-purple-500/20'
+                                                            : 'bg-orange-500/20'
                                                     }`}
                                             >
                                                 <plan.icon
                                                     className={`w-5 h-5 ${plan.color === 'gray'
-                                                            ? 'text-gray-400'
-                                                            : plan.color === 'blue'
-                                                                ? 'text-blue-400'
-                                                                : plan.color === 'purple'
-                                                                    ? 'text-purple-400'
-                                                                    : 'text-orange-400'
+                                                        ? 'text-gray-400'
+                                                        : plan.color === 'blue'
+                                                            ? 'text-blue-400'
+                                                            : plan.color === 'purple'
+                                                                ? 'text-purple-400'
+                                                                : 'text-orange-400'
                                                         }`}
                                                 />
                                             </div>
@@ -277,18 +277,42 @@ export default function PricingPage() {
                                         </div>
 
                                         {/* CTA */}
-                                        <Link
-                                            href={plan.id === 'free' ? '/login' : `/subscribe/${plan.id}`}
-                                            className={`w-full py-3 rounded-xl font-bold text-center transition-all mb-6 flex items-center justify-center gap-2 ${plan.popular
+                                        {plan.id === 'free' ? (
+                                            <Link
+                                                href="/login"
+                                                className="w-full py-3 rounded-xl font-bold text-center transition-all mb-6 flex items-center justify-center gap-2 bg-white/10 text-white hover:bg-white/20"
+                                            >
+                                                Start Free
+                                                <ArrowRight className="w-4 h-4" />
+                                            </Link>
+                                        ) : (
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const res = await fetch(`/api/subscribe/${plan.id}`, {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ currency, annual: billingCycle === 'annual' }),
+                                                        });
+                                                        const data = await res.json();
+                                                        if (data.url) {
+                                                            window.location.href = data.url;
+                                                        } else {
+                                                            alert(data.error || 'Unable to start checkout');
+                                                        }
+                                                    } catch (e) {
+                                                        alert('Please try again later');
+                                                    }
+                                                }}
+                                                className={`w-full py-3 rounded-xl font-bold text-center transition-all mb-6 flex items-center justify-center gap-2 ${plan.popular
                                                     ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:opacity-90'
-                                                    : plan.color === 'gray'
-                                                        ? 'bg-white/10 text-white hover:bg-white/20'
-                                                        : 'bg-white text-black hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            {plan.id === 'free' ? 'Start Free' : 'Get Started'}
-                                            <ArrowRight className="w-4 h-4" />
-                                        </Link>
+                                                    : 'bg-white text-black hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                Get Started
+                                                <ArrowRight className="w-4 h-4" />
+                                            </button>
+                                        )}
 
                                         {/* Features */}
                                         <div className="flex-grow">

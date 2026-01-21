@@ -30,10 +30,31 @@ export async function middleware(request: NextRequest) {
         },
     });
 
-    // ===== 0. CSRF TOKEN LOGIC MOVED (see end of function) =====
-    // Must run AFTER Supabase handling to avoid response overwrite
-    const isGetRequest = request.method === 'GET';
+    // ===== 0. ORIGIN-BASED CSRF PROTECTION =====
+    // Simple and robust - validates Origin header for mutation requests
+    const isMutationRequest = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method);
     const isApiRoute = request.nextUrl.pathname.startsWith('/api');
+
+    if (isMutationRequest && isApiRoute) {
+        const origin = request.headers.get('origin');
+        const host = request.headers.get('host');
+
+        // Allow if no Origin (same-origin requests sometimes omit it)
+        // But if Origin is present, it must match our host
+        if (origin) {
+            const originHost = new URL(origin).host;
+            if (originHost !== host) {
+                console.warn(`CSRF blocked: origin=${origin}, host=${host}`);
+                return NextResponse.json(
+                    { error: 'Request blocked for security reasons' },
+                    { status: 403 }
+                );
+            }
+        }
+    }
+
+    // Legacy CSRF cookie logic (keeping for backward compatibility)
+    const isGetRequest = request.method === 'GET';
     const hasCsrfCookie = request.cookies.has('csrf_token');
 
     // ===== 1. SECURITY HEADERS =====
