@@ -22,7 +22,7 @@ const CONFIG = {
     },
     AI: {
         TIMEOUT_SECONDS: 60,
-        MODEL: 'tngtech/deepseek-r1t2-chimera:free',
+        MODEL: 'deepseek/deepseek-r1-0528:free',
     },
     CACHE: {
         TTL_SECONDS: 3600,

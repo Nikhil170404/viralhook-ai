@@ -22,6 +22,7 @@ interface AIInputWithLoadingProps {
 const INTELLIGENCE_MODELS = [
     { id: "xiaomi/mimo-v2-flash:free", name: "Xiaomi MIMO v2", icon: Zap, desc: "Fast & optimized for flash" },
     { id: "tngtech/deepseek-r1t2-chimera:free", name: "TNG Chimera", icon: Target, desc: "Specialized tuning" },
+    { id: "deepseek/deepseek-r1-0528:free", name: "Deepseek R1", icon: Sparkles, desc: "Advanced reasoning & logic" },
 ];
 
 const MODELS = [
