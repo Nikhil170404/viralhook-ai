@@ -277,42 +277,18 @@ export default function PricingPage() {
                                         </div>
 
                                         {/* CTA */}
-                                        {plan.id === 'free' ? (
-                                            <Link
-                                                href="/login"
-                                                className="w-full py-3 rounded-xl font-bold text-center transition-all mb-6 flex items-center justify-center gap-2 bg-white/10 text-white hover:bg-white/20"
-                                            >
-                                                Start Free
-                                                <ArrowRight className="w-4 h-4" />
-                                            </Link>
-                                        ) : (
-                                            <button
-                                                onClick={async () => {
-                                                    try {
-                                                        const res = await fetch(`/api/subscribe/${plan.id}`, {
-                                                            method: 'POST',
-                                                            headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({ currency, annual: billingCycle === 'annual' }),
-                                                        });
-                                                        const data = await res.json();
-                                                        if (data.url) {
-                                                            window.location.href = data.url;
-                                                        } else {
-                                                            alert(data.error || 'Unable to start checkout');
-                                                        }
-                                                    } catch (e) {
-                                                        alert('Please try again later');
-                                                    }
-                                                }}
-                                                className={`w-full py-3 rounded-xl font-bold text-center transition-all mb-6 flex items-center justify-center gap-2 ${plan.popular
-                                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:opacity-90'
+                                        <Link
+                                            href={plan.id === 'free' ? '/login' : '/login'}
+                                            className={`w-full py-3 rounded-xl font-bold text-center transition-all mb-6 flex items-center justify-center gap-2 ${plan.popular
+                                                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:opacity-90'
+                                                : plan.id === 'free'
+                                                    ? 'bg-white/10 text-white hover:bg-white/20'
                                                     : 'bg-white text-black hover:bg-gray-200'
-                                                    }`}
-                                            >
-                                                Get Started
-                                                <ArrowRight className="w-4 h-4" />
-                                            </button>
-                                        )}
+                                                }`}
+                                        >
+                                            {plan.id === 'free' ? 'Start Free' : 'Coming Soon'}
+                                            <ArrowRight className="w-4 h-4" />
+                                        </Link>
 
                                         {/* Features */}
                                         <div className="flex-grow">
