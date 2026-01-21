@@ -108,11 +108,22 @@ async function generateHandler(req: Request) {
             );
         }
 
-        // Daily Quota Check
-        const quota = await checkUserRateLimit(user.id, 'free');
-        if (!quota.allowed) {
+        // ===== DAILY CREDIT CHECK (10 free credits/day) =====
+        const { data: creditsRemaining, error: creditError } = await dbClient.rpc(
+            'use_credit',
+            { p_user_id: user.id }
+        );
+
+        if (creditError) {
+            console.error('[Credit Error]', creditError);
+            // If RPC doesn't exist yet, allow the request (graceful degradation)
+            console.warn('[Credits] RPC not found, allowing request');
+        } else if (creditsRemaining === -1) {
             return NextResponse.json(
-                { error: "Daily quota exceeded. Upgrade to Pro for unlimited prompts." },
+                {
+                    error: "Daily limit reached (10 prompts/day). Come back tomorrow!",
+                    creditsRemaining: 0
+                },
                 { status: 429 }
             );
         }
