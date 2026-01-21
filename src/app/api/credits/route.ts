@@ -25,43 +25,26 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Get user credits using RPC
-        const { data, error } = await supabase
-            .rpc('get_user_credits', { p_user_id: user.id })
-            .single();
+        // Get user's daily credits using RPC
+        const { data: creditsRemaining, error } = await supabase.rpc(
+            'get_daily_credits',
+            { p_user_id: user.id }
+        );
 
         if (error) {
-            // If user doesn't have a subscription yet, return free tier defaults
-            if (error.code === 'PGRST116') {
-                return NextResponse.json({
-                    plan: 'free',
-                    creditsRemaining: 10,
-                    creditsMonthlyLimit: 10,
-                    creditsUsedToday: 0,
-                    dailyLimit: 50,
-                    isUnlimited: false,
-                });
-            }
-            throw error;
+            console.error('[Credits API] RPC Error:', error);
+            // If RPC doesn't exist, return default free tier
+            return NextResponse.json({
+                creditsRemaining: 10,
+                dailyLimit: 10,
+                plan: 'free',
+            });
         }
 
-        // Type assertion for RPC response
-        const credits = data as {
-            plan: string;
-            credits_remaining: number;
-            credits_monthly_limit: number;
-            credits_used_today: number;
-            daily_limit: number;
-            is_unlimited: boolean;
-        };
-
         return NextResponse.json({
-            plan: credits.plan,
-            creditsRemaining: credits.credits_remaining,
-            creditsMonthlyLimit: credits.credits_monthly_limit,
-            creditsUsedToday: credits.credits_used_today,
-            dailyLimit: credits.daily_limit,
-            isUnlimited: credits.is_unlimited,
+            creditsRemaining: creditsRemaining ?? 10,
+            dailyLimit: 10,
+            plan: 'free',
         });
     } catch (error: any) {
         console.error('Credits API Error:', error);
