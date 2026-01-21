@@ -2,11 +2,12 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Zap, ArrowRight, LogOut, Layout, Sparkles, Clock, Menu, X } from "lucide-react";
+import { Zap, ArrowRight, LogOut, Layout, Sparkles, Clock, Menu, X, Crown } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { CreditIndicator } from "./credit-indicator";
 
 const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -77,6 +78,18 @@ export function Navbar() {
                         </div>
                     ) : (
                         <>
+                            {/* Credit Indicator */}
+                            <CreditIndicator />
+
+                            {/* Pricing Link */}
+                            <Link
+                                href="/pricing"
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+                            >
+                                <Crown className="w-4 h-4 text-yellow-500" />
+                                <span>Pricing</span>
+                            </Link>
+
                             {navItems.map((item) => {
                                 if (item.hideIfExists && pathname === item.match) return null;
                                 const isActive = pathname === item.match;
