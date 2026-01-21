@@ -278,7 +278,7 @@ export default function PricingPage() {
 
                                         {/* CTA */}
                                         <Link
-                                            href={plan.id === 'free' ? '/login' : '/login'}
+                                            href={plan.id === 'free' ? '/login' : '/coming-soon'}
                                             className={`w-full py-3 rounded-xl font-bold text-center transition-all mb-6 flex items-center justify-center gap-2 ${plan.popular
                                                 ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:opacity-90'
                                                 : plan.id === 'free'
@@ -286,7 +286,7 @@ export default function PricingPage() {
                                                     : 'bg-white text-black hover:bg-gray-200'
                                                 }`}
                                         >
-                                            {plan.id === 'free' ? 'Start Free' : 'Coming Soon'}
+                                            {plan.id === 'free' ? 'Start Free (Unlimited)' : 'Coming Soon'}
                                             <ArrowRight className="w-4 h-4" />
                                         </Link>
 
