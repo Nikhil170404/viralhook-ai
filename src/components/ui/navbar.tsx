@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { CreditIndicator } from "./credit-indicator";
+import { Logo } from "./logo";
 
 const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -55,10 +56,7 @@ export function Navbar() {
             <div className="max-w-7xl mx-auto flex items-center justify-between">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0 z-50 relative">
-                    <div className="w-8 h-8 bg-gradient-to-tr from-purple-600 to-pink-500 rounded-lg flex items-center justify-center shadow-lg">
-                        <Zap className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-xl font-black tracking-tighter">VIRALHOOK<span className="text-pink-500">.AI</span></span>
+                    <Logo animated />
                 </Link>
 
                 {/* Desktop Navigation */}

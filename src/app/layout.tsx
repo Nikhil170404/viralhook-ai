@@ -26,10 +26,7 @@ export const metadata: Metadata = {
   title: "ViralHook AI | Create Viral Video Concepts Instantly",
   description: "Generate chaos-driven, viral video prompts for Instagram Reels & YouTube Shorts using AI. Turn everyday objects into trending content.",
   manifest: "/manifest.json",
-  icons: {
-    icon: '/favicon.ico',
-    apple: '/icons/icon-192x192.png',
-  },
+
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -54,14 +51,6 @@ export const metadata: Metadata = {
     description: 'Turn any object into a viral video with AI. Generate prompts for Kling, Runway & more.',
     url: 'https://viralhook.ai',
     siteName: 'ViralHook AI',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'ViralHook AI - Create Viral Video Concepts',
-      },
-    ],
     locale: 'en_US',
     type: 'website',
   },
@@ -69,7 +58,6 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'ViralHook AI | Create Viral Video Concepts',
     description: 'AI-powered viral video prompts for content creators',
-    images: ['/twitter-image.png'],
   },
   alternates: {
     canonical: 'https://viralhook.ai',
