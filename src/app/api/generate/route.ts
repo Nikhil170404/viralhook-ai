@@ -1,5 +1,5 @@
 import { withCSRF } from '@/middleware/withCSRF';
-import { getCinematicPrompt, getShockingPrompt, getChaosPrompt } from '@/lib/prompts/modes';
+import { getCinematicPrompt, getShockingPrompt, getChaosPrompt, getAnimePrompt, getCartoonPrompt, getStickmanPrompt } from '@/lib/prompts/modes';
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
@@ -225,6 +225,15 @@ async function generateHandler(req: Request) {
                 break;
             case 'shocking':
                 ({ systemPrompt, randomStyle } = getShockingPrompt(object, targetModel, personDescription));
+                break;
+            case 'anime':
+                ({ systemPrompt, randomStyle } = getAnimePrompt(object, targetModel, personDescription));
+                break;
+            case 'cartoon':
+                ({ systemPrompt, randomStyle } = getCartoonPrompt(object, targetModel, personDescription));
+                break;
+            case 'stickman':
+                ({ systemPrompt, randomStyle } = getStickmanPrompt(object, targetModel, personDescription));
                 break;
             case 'chaos':
             default:

@@ -14,7 +14,7 @@ export const GenerateRequestSchema = z.object({
         .trim(),
 
     mode: z
-        .enum(['chaos', 'cinematic', 'shocking'])
+        .enum(['chaos', 'cinematic', 'shocking', 'anime', 'cartoon', 'stickman'])
         .optional()
         .default('chaos'),
 

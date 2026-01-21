@@ -318,6 +318,147 @@ export const chaosScenarios = [
     }
 ];
 
+// ===== ANIME SCENARIOS =====
+export const animeScenarios = [
+    {
+        category: "Shonen Power Up",
+        template: (subject: string) => ({
+            photoPlacement: `${subject} standing resolute, fists clenched at sides.`,
+            animeAction: `Intense glowing blue aura erupts around subject, ground cracks beneath feet, hair floats upward, electrical sparks crackle.`,
+            cameraWork: "Dutch angle looking up, camera shake on power burst, radial speed lines",
+            visualStyle: "MAPPA studio style, high contrast, vivid saturation, cel-shaded",
+            platform: "Kling AI 2.6 (Anime Mode)",
+            viralHook: "Domain Expansion 🤞",
+            expectedViews: "5-15M views",
+            difficulty: "Medium",
+            estimatedTime: "8 mins (Kling) + 5 mins post",
+            postProcessing: "Add energy aura overlay. Crank up contrast and saturation.",
+            commonIssues: "Aura can obscure face - keep facial expression fierce and visible."
+        })
+    },
+    {
+        category: "Sakuga Combat Strike",
+        template: (subject: string) => ({
+            photoPlacement: `${subject} in dynamic mid-air combat pose.`,
+            animeAction: `Subject unleashes a devastating punch with impact frames (black and white flash), shockwave ripples through air.`,
+            cameraWork: "Dynamic tracking cam, smash zoom on impact, motion blur",
+            visualStyle: "Ufotable style, particle effects, fluid animation, 2D aesthetic",
+            platform: "Runway Gen-4 (Motion)",
+            viralHook: "That animation budget though 💸",
+            expectedViews: "8-20M views",
+            difficulty: "Hard",
+            estimatedTime: "15 mins (Runway) + 5 mins post",
+            postProcessing: "Add impact sound/bass drop. Flash white frame on hit.",
+            commonIssues: "Motion blur can look messy - specify 'sharp outlines' and 'sakuga style'."
+        })
+    },
+    {
+        category: "Slice of Life Moment",
+        template: (subject: string) => ({
+            photoPlacement: `${subject} sitting by a window, soft rain outside.`,
+            animeAction: `Subject gently turns to look at camera, soft smile, hair sways in breeze, warm light hits dust motes.`,
+            cameraWork: "Static medium shot with subtle zoom, focus pull",
+            visualStyle: "Kyoto Animation style, soft edges, emotional lighting, high detail eyes",
+            platform: "Veo 3 (2D Animation)",
+            viralHook: "Main character energy ✨",
+            expectedViews: "2-8M views",
+            difficulty: "Easy",
+            estimatedTime: "5 mins (Veo) + 2 mins post",
+            postProcessing: "Lo-fi hip hop track. Soft glow filter.",
+            commonIssues: "Eyes must be perfect - use 'highly detailed expressive anime eyes'."
+        })
+    }
+];
+
+// ===== CARTOON SCENARIOS =====
+export const cartoonScenarios = [
+    {
+        category: "Rubber Hose Dance",
+        template: (subject: string) => ({
+            photoPlacement: `${subject} styled as a 1930s cartoon character.`,
+            cartoonAction: `Subject performs a bouncy, rhythmic dance with rubbery limbs, bouncing up and down to the beat.`,
+            cameraWork: "Static wide shot, slight film grain texture",
+            visualStyle: "Fleischer Studios style, black and white, pie-cut eyes, simplistic",
+            platform: "Runway Gen-4 (Style Ref)",
+            viralHook: "Vintage vibes 📺",
+            expectedViews: "3-10M views",
+            difficulty: "Medium",
+            estimatedTime: "10 mins (Runway) + 3 mins post",
+            postProcessing: "Add old film scratch overlay. Ragtime piano music.",
+            commonIssues: "Limbs can get too distorted - keep character design simple."
+        })
+    },
+    {
+        category: "Saturday Morning Action",
+        template: (subject: string) => ({
+            photoPlacement: `${subject} running towards camera, determined expression.`,
+            cartoonAction: `Subject runs with exaggerated speed lines, jumps over an obstacle with 'squash and stretch' deformation.`,
+            cameraWork: "Tracking shot, low angle, fast paced",
+            visualStyle: "90s X-Men/Spiderman cartoon style, bold thick outlines, flat shading",
+            platform: "Kling AI (Cartoon Mode)",
+            viralHook: "Nostalgia hit hard ⚡",
+            expectedViews: "5-12M views",
+            difficulty: "Medium",
+            estimatedTime: "8 mins (Kling) + 2 mins post",
+            postProcessing: "Rock guitar intro. Boost vibrance.",
+            commonIssues: "3D rendering drift - enforce '2D flat shading' in prompt."
+        })
+    },
+    {
+        category: "Doraemon Gadget Reveal",
+        template: (subject: string) => ({
+            photoPlacement: `${subject} holding a futuristic gadget, wide eyed wonder.`,
+            cartoonAction: `Subject pulls a giant glowing object out of a small pocket, background turns into colorful starburst pattern.`,
+            cameraWork: "Zoom out to reveal object size, simple composition",
+            visualStyle: "Doraemon/Fujiko F. Fujio style, rounded shapes, primary colors, simple background",
+            platform: "Veo 3",
+            viralHook: "I need this gadget 🤖",
+            expectedViews: "4-15M views",
+            difficulty: "Easy",
+            estimatedTime: "6 mins (Veo) + 2 mins post",
+            postProcessing: "Sound effect: 'Ta-da!' fanfare. Bright joyful music.",
+            commonIssues: "Colors must be flat - 'no gradients' is key."
+        })
+    }
+];
+
+// ===== STICKMAN SCENARIOS =====
+export const stickmanScenarios = [
+    {
+        category: "Stickman Parkour",
+        template: (subject: string) => ({
+            photoPlacement: `Black stick figure on pure white background.`,
+            stickmanAction: `Stick figure runs, wall-jumps off screen edge, does a backflip, and lands in superhero pose.`,
+            cameraWork: "Side scrolling view, fluid follow cam",
+            visualStyle: "Alan Becker / Pivot Animator style, minimalist black lines, smooth motion",
+            platform: "Runway Gen-4 (Motion Brush)",
+            viralHook: "Parkour pro 🏃‍♂️",
+            expectedViews: "10-25M views",
+            difficulty: "Hard (Simplicity is hard for AI)",
+            estimatedTime: "15 mins (Runway) + 5 mins post",
+            postProcessing: "Add 'whoosh' sounds for jumps. Keep audio minimal.",
+            commonIssues: "AI adds details/faces - negative prompt 'realism, face, clothes' aggressively."
+        })
+    },
+    {
+        category: "Stickman Epic Fight",
+        template: (subject: string) => ({
+            photoPlacement: `Two stick figures (one Red, one Blue) facing off.`,
+            stickmanAction: `Red figure throws a fireball, Blue figure dodges with Matrix-style lean and counters with a high kick.`,
+            cameraWork: "Static wide shot to show action clarity",
+            visualStyle: "Xiao Xiao flash animation style, fast paced, impact effects are simple lines",
+            platform: "Kling AI",
+            viralHook: "Top 10 Anime Battles ⚔️",
+            expectedViews: "8-30M views",
+            difficulty: "Hard",
+            estimatedTime: "12 mins (Kling) + 5 mins post",
+            postProcessing: "8-bit fighting sounds. Impact stars overlay.",
+            commonIssues: "Figures blending together - keep colors distinct (Red vs Blue)."
+        })
+    }
+];
+
+
 // ===== HOOK STYLES (Text/Script) =====
 export const VISUAL_HOOK_STYLES = [
     { name: "Mystery Reveal", description: "Start with obscured/partial view, slowly reveal the unexpected" },

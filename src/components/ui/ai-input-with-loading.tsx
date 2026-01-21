@@ -14,7 +14,7 @@ interface AIInputWithLoadingProps {
     maxHeight?: number;
     loadingDuration?: number;
     thinkingDuration?: number;
-    onSubmit?: (value: string, mode: 'chaos' | 'cinematic' | 'shocking', targetModel: string, aiModel: string, personDescription?: string) => void | Promise<void>;
+    onSubmit?: (value: string, mode: 'chaos' | 'cinematic' | 'shocking' | 'anime' | 'cartoon' | 'stickman', targetModel: string, aiModel: string, personDescription?: string) => void | Promise<void>;
     className?: string;
     autoAnimate?: boolean;
 }
@@ -48,7 +48,7 @@ export function AIInputWithLoading({
     const [showPersonInput, setShowPersonInput] = useState(false);
     const [submitted, setSubmitted] = useState(autoAnimate);
     const [isAnimating, setIsAnimating] = useState(autoAnimate);
-    const [mode, setMode] = useState<'chaos' | 'cinematic' | 'shocking'>('chaos');
+    const [mode, setMode] = useState<'chaos' | 'cinematic' | 'shocking' | 'anime' | 'cartoon' | 'stickman'>('chaos');
     const [targetModel, setTargetModel] = useState<string>("auto");
     const [aiModel, setAiModel] = useState<string>(INTELLIGENCE_MODELS[0].id);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -118,9 +118,9 @@ export function AIInputWithLoading({
                 <div className="flex flex-col lg:flex-row items-center gap-3 lg:gap-4 w-full justify-center">
 
                     {/* Mode Segmented Control - Scrollable on mobile */}
-                    <div className="flex overflow-x-auto no-scrollbar pb-2 lg:pb-0 w-full lg:w-auto justify-center">
+                    <div className="flex overflow-x-auto no-scrollbar pb-2 lg:pb-0 w-full lg:w-auto justify-start md:justify-center">
                         <div className="flex bg-gray-900/40 backdrop-blur-md p-1 rounded-2xl border border-white/5 shadow-2xl flex-nowrap min-w-max">
-                            {(['chaos', 'cinematic', 'shocking'] as const).map((m) => (
+                            {(['chaos', 'cinematic', 'shocking', 'anime', 'cartoon', 'stickman'] as const).map((m) => (
                                 <button
                                     key={m}
                                     onClick={() => setMode(m)}
@@ -136,14 +136,20 @@ export function AIInputWithLoading({
                                                 "absolute inset-0 rounded-xl shadow-lg -z-10",
                                                 m === 'chaos' ? "bg-gradient-to-r from-pink-500 to-purple-600" :
                                                     m === 'cinematic' ? "bg-gradient-to-r from-blue-500 to-cyan-500" :
-                                                        "bg-gradient-to-r from-red-500 to-orange-500"
+                                                        m === 'shocking' ? "bg-gradient-to-r from-red-500 to-orange-500" :
+                                                            m === 'anime' ? "bg-gradient-to-r from-indigo-500 to-purple-500" :
+                                                                m === 'cartoon' ? "bg-gradient-to-r from-yellow-400 to-orange-500" :
+                                                                    "bg-gradient-to-r from-gray-500 to-gray-700"
                                             )}
                                             transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                         />
                                     )}
                                     {m === 'chaos' ? <Zap className="w-3.5 h-3.5" /> :
                                         m === 'cinematic' ? <Clapperboard className="w-3.5 h-3.5" /> :
-                                            <Zap className="w-3.5 h-3.5 rotate-45" />}
+                                            m === 'shocking' ? <Zap className="w-3.5 h-3.5 rotate-45" /> :
+                                                m === 'anime' ? <Sparkles className="w-3.5 h-3.5" /> :
+                                                    m === 'cartoon' ? <Layers className="w-3.5 h-3.5" /> :
+                                                        <Cpu className="w-3.5 h-3.5" />}
                                     <span className="capitalize">{m}</span>
                                 </button>
                             ))}
@@ -274,7 +280,10 @@ export function AIInputWithLoading({
                         placeholder={
                             mode === 'chaos' ? "e.g. A Nike Shoe, A Slice of Pizza..." :
                                 mode === 'cinematic' ? "e.g. A futuristic city, A calm ocean..." :
-                                    "e.g. A ferris wheel ride, A guy crossing the street..."
+                                    mode === 'anime' ? "e.g. A samurai showdown, A magical transformation..." :
+                                        mode === 'cartoon' ? "e.g. A running cat, A dancing toaster..." :
+                                            mode === 'stickman' ? "e.g. A stick figure parkour run..." :
+                                                "e.g. A ferris wheel ride, A guy crossing the street..."
                         }
                         className={cn(
                             "w-full bg-white/10 rounded-3xl pl-5 md:pl-6 pr-10 md:pr-12 py-3 md:py-4",
