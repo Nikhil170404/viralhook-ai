@@ -53,7 +53,7 @@ export default function HooksPage() {
     // Form State
     const [script, setScript] = useState("");
     const [stylePreference, setStylePreference] = useState("");
-    const [mode, setMode] = useState<'chaos' | 'cinematic' | 'shocking'>('shocking');
+    const [mode, setMode] = useState<'chaos' | 'cinematic' | 'shocking' | 'anime' | 'cartoon' | 'stickman'>('shocking');
     const [targetModel, setTargetModel] = useState("kling");
     const [aiModel, setAiModel] = useState(AI_MODELS[0].id);
     const [isAiDropdownOpen, setIsAiDropdownOpen] = useState(false);
@@ -243,28 +243,36 @@ export default function HooksPage() {
                     </div>
 
                     {/* Mode & AI Model */}
-                    <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex flex-col gap-4 items-center">
                         {/* Mode Selector */}
-                        <div className="flex bg-gray-900/50 rounded-xl p-1 flex-1">
-                            {(['shocking', 'cinematic', 'chaos'] as const).map((m) => (
-                                <button
-                                    key={m}
-                                    onClick={() => setMode(m)}
-                                    className={cn(
-                                        "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all",
-                                        mode === m
-                                            ? m === 'shocking' ? "bg-gradient-to-r from-red-500 to-orange-500 text-white"
-                                                : m === 'cinematic' ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
-                                                    : "bg-gradient-to-r from-pink-500 to-purple-500 text-white"
-                                            : "text-gray-500 hover:text-white"
-                                    )}
-                                >
-                                    {m === 'shocking' && <Zap className="w-3.5 h-3.5" />}
-                                    {m === 'cinematic' && <Clapperboard className="w-3.5 h-3.5" />}
-                                    {m === 'chaos' && <Sparkles className="w-3.5 h-3.5" />}
-                                    <span className="capitalize">{m}</span>
-                                </button>
-                            ))}
+                        <div className="flex overflow-x-auto no-scrollbar pb-2 sm:pb-0 gap-1 w-full sm:w-auto">
+                            <div className="flex bg-gray-900/50 rounded-xl p-1 w-full sm:w-auto min-w-max">
+                                {(['shocking', 'cinematic', 'chaos', 'anime', 'cartoon', 'stickman'] as const).map((m) => (
+                                    <button
+                                        key={m}
+                                        onClick={() => setMode(m)}
+                                        className={cn(
+                                            "flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all",
+                                            mode === m
+                                                ? m === 'shocking' ? "bg-gradient-to-r from-red-500 to-orange-500 text-white"
+                                                    : m === 'cinematic' ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                                                        : m === 'chaos' ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white"
+                                                            : m === 'anime' ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                                                                : m === 'cartoon' ? "bg-gradient-to-r from-yellow-400 to-orange-500 text-white"
+                                                                    : "bg-gradient-to-r from-gray-500 to-gray-700 text-white"
+                                                : "text-gray-500 hover:text-white"
+                                        )}
+                                    >
+                                        {m === 'shocking' && <Zap className="w-3.5 h-3.5" />}
+                                        {m === 'cinematic' && <Clapperboard className="w-3.5 h-3.5" />}
+                                        {m === 'chaos' && <Sparkles className="w-3.5 h-3.5" />}
+                                        {m === 'anime' && <Sparkles className="w-3.5 h-3.5" />}
+                                        {m === 'cartoon' && <Layers className="w-3.5 h-3.5" />}
+                                        {m === 'stickman' && <Cpu className="w-3.5 h-3.5" />}
+                                        <span className="capitalize">{m}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* AI Model Dropdown */}

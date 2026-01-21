@@ -115,7 +115,7 @@ export function AIInputWithLoading({
             <div className="relative max-w-xl lg:max-w-4xl w-full mx-auto flex items-center lg:items-center flex-col gap-4">
 
                 {/* --- PREMIUM SELECTOR BAR --- */}
-                <div className="flex flex-col lg:flex-row items-center gap-3 lg:gap-4 w-full justify-center">
+                <div className="flex flex-col items-center gap-3 w-full justify-center">
 
                     {/* Mode Segmented Control - Scrollable on mobile */}
                     <div className="flex overflow-x-auto no-scrollbar pb-2 lg:pb-0 w-full lg:w-auto justify-start md:justify-center">

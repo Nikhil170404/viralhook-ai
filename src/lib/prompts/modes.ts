@@ -336,7 +336,7 @@ Return a JSON object with:
 export function getHooksPrompt(
     script: string,
     stylePreference: string = "",
-    mode: 'chaos' | 'cinematic' | 'shocking' = 'shocking',
+    mode: 'chaos' | 'cinematic' | 'shocking' | 'anime' | 'cartoon' | 'stickman' = 'shocking',
     targetModel: string = 'kling'
 ): { systemPrompt: string } {
 
@@ -347,7 +347,13 @@ export function getHooksPrompt(
         ? "wild, chaotic, political-defying, pattern-interrupt with suspended objects and impossible scenarios"
         : mode === 'cinematic'
             ? "dramatic, visually stunning, Hollywood-quality cinematography with emotional depth"
-            : "attention-grabbing, controversial, stop-scroll, shocking revelation that demands answers";
+            : mode === 'anime'
+                ? "high-octane shonen anime style, intense action, sakuga quality animation, dramatic camera angles, MAPPA/Ufotable aesthetic"
+                : mode === 'cartoon'
+                    ? "classic 2D cartoon animation, squash and stretch physics, vibrant colors, expressive character movement, Saturday morning vibe"
+                    : mode === 'stickman'
+                        ? "minimalist stick figure animation, smooth fluid combat/movement, clean lines on white background, Pivot Animator style"
+                        : "attention-grabbing, controversial, stop-scroll, shocking revelation that demands answers";
 
     const systemPrompt = `
 You are an elite AI video prompt engineer specializing in creating VIRAL OPENING HOOKS for social media shorts and reels.

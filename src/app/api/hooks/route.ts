@@ -137,7 +137,7 @@ async function hooksHandler(req: Request) {
         const { systemPrompt } = getHooksPrompt(
             sanitizedScript.sanitized,
             stylePreference,
-            mode as 'chaos' | 'cinematic' | 'shocking',
+            mode as 'chaos' | 'cinematic' | 'shocking' | 'anime' | 'cartoon' | 'stickman',
             targetModel
         );
 
