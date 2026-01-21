@@ -152,6 +152,25 @@ export function Navbar() {
                                 </div>
                             ) : (
                                 <div className="flex flex-col gap-4">
+                                    {/* Mobile Credit Indicator - Prominent at top */}
+                                    <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 rounded-2xl p-4 border border-purple-500/30">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-400 text-sm">Your Credits</span>
+                                            <CreditIndicator />
+                                        </div>
+                                    </div>
+
+                                    {/* Pricing Link */}
+                                    <Link
+                                        href="/pricing"
+                                        className="flex items-center gap-4 px-4 py-4 rounded-2xl text-lg font-medium text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10 transition-all border border-yellow-500/20"
+                                    >
+                                        <Crown className="w-6 h-6" />
+                                        <span>Upgrade Plan</span>
+                                    </Link>
+
+                                    <hr className="border-white/10 my-2" />
+
                                     {navItems.map((item) => {
                                         const isActive = pathname === item.match;
                                         return (

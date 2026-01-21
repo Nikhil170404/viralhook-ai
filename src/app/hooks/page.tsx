@@ -398,7 +398,24 @@ export default function HooksPage() {
                                         Copy Prompt
                                     </button>
                                 </div>
-                                <p className="text-gray-200 leading-relaxed">{result.prompt}</p>
+                                <p className="text-gray-200 leading-relaxed mb-4">{result.prompt}</p>
+
+                                {/* Mobile-friendly Copy Button */}
+                                <button
+                                    onClick={() => copyToClipboard(result.prompt, 'prompt-main')}
+                                    className={cn(
+                                        "w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2",
+                                        copiedField === 'prompt-main' || copiedField === 'prompt'
+                                            ? "bg-green-500 text-white"
+                                            : "bg-gradient-to-r from-orange-500 to-red-500 text-white hover:opacity-90 active:scale-95"
+                                    )}
+                                >
+                                    {copiedField === 'prompt-main' || copiedField === 'prompt' ? (
+                                        <><Check className="w-4 h-4" /> Copied!</>
+                                    ) : (
+                                        <><Copy className="w-4 h-4" /> Copy Video Prompt</>
+                                    )}
+                                </button>
                             </div>
 
                             {/* Details Grid */}

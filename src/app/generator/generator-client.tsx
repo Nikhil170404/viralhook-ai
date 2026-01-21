@@ -200,12 +200,14 @@ export default function GeneratorClient({ initialSession }: GeneratorClientProps
                                         </div>
                                     )}
 
-                                    {/* Copy Bar */}
-                                    <div className="pt-4 border-t border-gray-800 flex items-center justify-between">
-                                        <span className="text-xs text-gray-500 font-mono">
+                                    {/* Copy Bar - Mobile Optimized */}
+                                    <div className="pt-4 border-t border-gray-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                                        <span className="text-xs text-gray-500 font-mono text-center sm:text-left">
                                             Optimized for {selectedPrompt?.platform || 'All Platforms'}
                                         </span>
-                                        <div className="flex gap-3">
+
+                                        {/* Action Buttons - Stack on mobile */}
+                                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                                             {/* Share Button (Only if we have a real ID) */}
                                             {selectedPrompt?.id && selectedPrompt.id !== 0 && (
                                                 <button
@@ -215,16 +217,17 @@ export default function GeneratorClient({ initialSession }: GeneratorClientProps
                                                         setIsShareCopied(true);
                                                         setTimeout(() => setIsShareCopied(false), 2000);
                                                     }}
-                                                    className={`px-5 py-2.5 rounded-xl font-bold text-sm border transition-all flex items-center gap-2 ${isShareCopied
+                                                    className={`w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl font-bold text-sm border transition-all flex items-center justify-center gap-2 ${isShareCopied
                                                         ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                                                        : 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20'
+                                                        : 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20 active:scale-95'
                                                         }`}
                                                 >
                                                     {isShareCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-                                                    {isShareCopied ? "Link Copied" : "Share Link"}
+                                                    {isShareCopied ? "Link Copied!" : "Share Link"}
                                                 </button>
                                             )}
 
+                                            {/* Copy Button - Primary CTA */}
                                             <button
                                                 onClick={() => {
                                                     navigator.clipboard.writeText(generatedResult);
@@ -232,11 +235,11 @@ export default function GeneratorClient({ initialSession }: GeneratorClientProps
                                                     setTimeout(() => setIsCopied(false), 2000);
                                                 }}
                                                 className={`
-                            px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 flex items-center gap-2
-                            ${isCopied
+                                                    w-full sm:w-auto px-6 py-3 sm:py-2.5 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2
+                                                    ${isCopied
                                                         ? 'bg-green-500 text-white shadow-lg shadow-green-500/20 scale-105'
-                                                        : 'bg-white text-black hover:bg-gray-100 hover:scale-105 shadow-lg shadow-white/10'}
-                        `}
+                                                        : 'bg-white text-black hover:bg-gray-100 active:scale-95 shadow-lg shadow-white/10'}
+                                                `}
                                             >
                                                 {isCopied ? (
                                                     <>✓ Copied!</>
