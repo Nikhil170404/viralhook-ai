@@ -13,124 +13,70 @@ export const PLATFORMS = {
 export type PlatformType = typeof PLATFORMS[keyof typeof PLATFORMS];
 
 export const getKlingInstructions = () => `
-**KLING AI 2.6 PRO (Motion Control Leader):**
+**KLING AI 2.6 PRO (4-Part Universal Structure):**
+
+**Optimal Word Count:** 60-100 words (5-7 distinct elements).
 
 **Syntax Structure:**
-Subject Description → Action Description → Context/Environment → Cinematic Style
+Subject (2-3 details) → Action (Speed/Manner) → Context (3-5 elements) → Style (Camera/Lighting/Mood)
 
 **Critical Rules (2026):**
-1. **Inverted Terminology**: "tilt left" means "pan left" in other platforms
-2. **Action Limit**: Keep to 1-3 actions per shot maximum
-3. **Motion Endpoints**: ALWAYS add "then settles back" or "comes to rest" to prevent generation hangs
-4. **No Exact Numbers**: Avoid "5 birds" - use "a flock of birds" instead
-5. **Motion Keywords**: tilt, pan, orbit, tracking, following, glide, sweep
-
-**Best For:**
-- Complex motion sequences
-- Physics simulation (soft body, ragdoll)
-- Character locomotion with weight transfer
-- 4-part structural prompts
-- Extended videos (2+ minutes possible)
-
-**Motion Brush Feature:**
-- Use "Motion Brush on [element]" for selective animation
-- "Static Brush on background" to freeze surroundings
-- Draw trajectory paths for precise object motion
+1. **Motion Endpoints**: ALWAYS end with "then settles", "comes to rest", or "gradually slowing" to prevent 99% generation hangs.
+2. **Explicit Physics**: Unlike other models, Kling explicitly rewards physics keywords like "fluid dynamics", "realistic liquid dynamics", or "fabric flowing naturally".
+3. **Inverted Terminology**: "tilt left" = "pan left". Use specific camera specification from the start.
+4. **No Exact Numbers**: Use "a cluster" or "a flock" instead of "5".
 
 **Example Kling Prompt:**
-"A sleek red convertible with chrome details (Subject). Camera tracks alongside as it drives along coastal highway at moderate speed, then gradually pulls back revealing cliffside (Action). Dramatic ocean sunset, golden hour lighting (Context). Cinematic color grading, 2.39:1 anamorphic (Style)."
+"Slow tracking shot. A 35-year-old woman with auburn hair in an emerald coat walks purposefully along an urban path at golden hour (Subject/Action). Autumn leaves scatter on pavement, ground-level mist (Context). Documentary realism, motion gradually slows as she reaching park bench (Style/Endpoint)."
 `;
 
 export const getRunwayInstructions = () => `
-**RUNWAY GEN-4 (Camera Control Master):**
+**RUNWAY GEN-4 (The "Simplicity" Engine):**
+
+**Optimal Word Count:** 20-50 words (**Thrives on simplicity**).
 
 **Syntax Structure:**
-[Camera Movement]: [Establishing Scene]. [Details]. [Style].
+[Camera Movement]: [Establishing Scene]. [Additional Details]. [Style].
 
 **Critical Rules (2026):**
-1. **NO NEGATIVE PROMPTS**: Saying "no movement" causes unpredictable results
-2. **Positive Description Only**: Describe what you WANT, not what you don't want
-3. **Camera Sliders**: Use precise control (-10 to +10 scale)
-   - Horizontal: Left/Right pan
-   - Vertical: Up/Down tilt  
-   - Zoom: In/Out
-   - Pan: Camera rotation horizontal axis
-   - Tilt: Camera rotation vertical axis
-   - Roll: Camera rotation on Z-axis
+1. **Describe Outcomes**: Use "Actor takes four steps to window, pauses" instead of technical jargon.
+2. **Behavioral Physics**: Describe "Objects impact and bounce" instead of "collision detection".
+3. **Information Hierarchy**: Lead with the critical element. Never redescribe what's in a reference image.
+4. **No Negative Prompts**: Focusing on what you DON'T want causes model confusion.
 
-**Best For:**
-- Precise camera control
-- Professional cinematography replication
-- Creative effects and artistic styles
-- Fast iteration (Gen-3 Turbo: 5 credits/second)
-
-**Camera Control Examples:**
-"[Camera Movement]: Dolly zoom, slow push-in while zooming out. [Establishing Scene]: Portrait of subject with realization. [Details]: Background expands, subject stays same size. [Style]: Hitchcock vertigo effect, dramatic lighting."
-
-Camera Slider Format: "Camera: horizontal -3, vertical 0, zoom +5, pan +2, tilt 0, roll 0"
+**Example Runway Prompt:**
+"Tracking shot: The camera follows the cyclist from a low angle as they pedal steadily along the coastal highway. Golden hour lighting, cinematic look."
 `;
 
 export const getVeoInstructions = () => `
-**GOOGLE VEO 3 (High Fidelity + Native Audio):**
+**GOOGLE VEO 3.1 (Cinematic Verbosity):**
+
+**Optimal Word Count:** 300-400 words (Rewards front-loaded detail).
 
 **Syntax Structure:**
-Hierarchical: Subject → Action → Context → Camera → Lighting → Audio
+Timestamp-based Sequencing: [00:00-00:0X] Camera action + Subject behavior.
 
 **Critical Features (2026):**
-1. **Native Audio Generation**: First platform with synchronized sound
-2. **Professional Cinematography**: Understands terms like "dolly zoom", "180-degree arc shot"
-3. **Superior Physics**: Best physics accuracy in current generation
-4. **4K Standard**: High resolution output default
+1. **Emergent Physics**: NEVER use physics jargon (ragdoll/collision). Describe outcomes like "sparks scatter" or "water flows naturally".
+2. **Multi-Shot Sequencing**: Can handle complex sequences involving time-stamps.
+3. **Native Audio**: Describe sound effects and ambient noise as part of the prompt.
 
-**Audio Description:**
-- Separate audio into sentences
-- "Sound effects: [specific sounds]. Ambient noise: [atmosphere]. Dialogue: [if applicable]"
-- Example: "Sound effects: glass clinking, footsteps echo. Ambient noise: gentle room tone, distant traffic."
-
-**Best For:**
-- Photorealistic scenes requiring audio
-- Complex physics interactions
-- Professional broadcast quality
-- Dialogue and sound-critical content
-
-**Cinematography Keywords:**
-- Time-lapse, dolly zoom, 180-degree arc shot, crane up, tracking shot
-- ARRI Alexa, wide-angle lens, shallow depth of field
-- Volumetric fog, god rays, golden hour, practical lighting
-
-**Example Veo Prompt:**
-"Wide static shot of a misty mountain valley under fast-moving clouds. Time-lapse feel as shadows sweep across dunes. Camera: 180-degree slow arc around peak. Lighting: Early morning golden hour, volumetric fog in valleys. Audio: Wind whistling, distant bird calls. Ambient: Deep mountain silence between gusts. Style: National Geographic, 4K, anamorphic lens."
+**Example Veo Segment:**
+"[00:00-00:02] Wide crane shot of explorer in vast temple complex. [00:02-00:05] Camera dollies in to freckled face expressing awe. Audio: Wind whistling, distance stone scraping."
 `;
 
 export const getLumaInstructions = () => `
-**LUMA DREAM MACHINE (RAY3) (Physics + Speed):**
+**LUMA DREAM MACHINE RAY3 (Conversational Flow):**
 
-**Syntax Structure:**
-Concise 3-4 sentences focusing on visual flow
+**Optimal Word Count:** 3-4 natural language sentences.
 
 **Critical Features (2026):**
-1. **Physics-Aware**: Realistic motion and fluid dynamics
-2. **12 Camera Presets**: Predefined professional movements
-3. **HDR Output**: 16-bit EXR format capability
-4. **Speed**: Fast generation times
-5. **Seamless Loops**: Excellent for looping content
-
-**Best For:**
-- Fluid simulations (water, smoke, paint)
-- Morphing and transformation effects  
-- Dreamy artistic aesthetics
-- Quick iterations
-- Looping animations
-
-**Camera Presets:**
-Static, Push In, Pull Out, Pan Left, Pan Right, Tilt Up, Tilt Down, Orbit Left, Orbit Right, Crane Up, Crane Down, Tracking
-
-**Fluid Dynamics Keywords:**
-- Splash, cascade, ripple, pour, flow, wave, viscosity
-- Morph, dissolve, blend, transform, liquefy
+1. **Reasoning Mode**: The model "thinks" about your prompt flow—be conversational but precise.
+2. **Visual Annotation**: Describe motion as a trajectory (e.g., "Subject moves in a sweeping arc from camera left to right").
+3. **Fluidity**: Excellent for loops and morphing.
 
 **Example Luma Prompt:**
-"Slow motion camera. A vibrant street performer in graffiti-adorned alley, colorful sequined outfit catching light. Camera starts low angle capturing outfit detail, smoothly transitions to wide shot showing urban surroundings. Energetic atmosphere, particle effects of confetti falling. Physics-aware fabric flow and hair movement."
+"A vibrant street performer in a sequined outfit dances in a graffiti-adorned alley. The camera starts at a low angle capturing the fabric flow, then smoothly transitions to a wide shot showing the environment. Confetti falls around them as they finish with a dramatic pose."
 `;
 
 export const getNegativePrompt = (model: string) => {

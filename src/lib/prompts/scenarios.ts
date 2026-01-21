@@ -249,71 +249,50 @@ export const viralShockScenarios = [
     }
 ];
 
-// ===== CHAOS SCENARIOS =====
+// ===== 3. CHAOS MODE SCENARIOS (2026 UPDATED) =====
 export const chaosScenarios = [
     {
-        category: "Physics Break",
+        category: "Bodycam Comedy",
         template: (subject: string) => ({
-            chaosAction: `${subject} suddenly turns into liquid mercury, splashes upward against gravity, then evaporates into floating geometric pyramids.`,
-            visualStyle: "Datamoshing, glitch texture, RGB split, liquid simulation",
-            viralHook: "My brain.exe stopped working 🧠",
-            platform: "Kling (High motion)",
+            visualStyle: "Bodycam POV, fish-eye distortion, shaky movement",
+            chaosAction: `Police bodycam footage of a traffic stop, but the driver is ${subject} wearing professional business attire. ${subject} presents a tiny briefcase and negotiates with serious legal jargon.`,
+            viralHook: "POV: You pulled over a professional taco.",
+            postProcessing: "Add radio static and muffled dialogue.",
             difficulty: "Hard",
-            estimatedTime: "10 mins (Kling) + 10 mins post",
-            postProcessing: "Add glitch sound effects. Maximize saturation.",
-            commonIssues: "Video might look like noise - keep subject recognizable for first 2 seconds."
+            estimatedTime: "25 mins"
         })
     },
     {
-        category: "Mumbai Traffic Chaos",
+        category: "Character Role Swap",
         template: (subject: string) => ({
-            chaosAction: `${subject} is stuck in a Mumbai traffic jam where rickshaws are flying in zero gravity and cows are walking vertically on walls.`,
-            visualStyle: "Surrealism, saturated colors, chaotic motion, fisheye lens",
-            viralHook: "Average day in Mumbai 🇮🇳",
-            platform: "Runway Gen-4",
+            visualStyle: "Cinematic, high-budget movie scene",
+            chaosAction: `Darth Vader in a flight attendant uniform, calmly walking down the aisle of a commercial airplane, demonstrating safety procedures with ${subject}.`,
+            viralHook: "The Dark Side has snack service.",
+            postProcessing: "Heavy breathing sound effects.",
             difficulty: "Medium",
-            estimatedTime: "10 mins (Runway) + 5 mins post",
-            postProcessing: "Add traffic honking audio but distorted. Speed up footage 2x.",
-            commonIssues: "Too many objects can crash the generation - focus on 3-4 main elements."
+            estimatedTime: "15 mins"
         })
     },
     {
-        category: "Scale Manipulation",
+        category: "Sentient Interaction",
         template: (subject: string) => ({
-            chaosAction: `A tiny version of ${subject} is targeted by a giant hand, but then ${subject} suddenly grows 100x size and consumes the hand.`,
-            visualStyle: "Fisheye lens, forced perspective, macro photography",
-            viralHook: "Uno Reverse Card 🔄",
-            platform: "Veo 3",
+            visualStyle: "Dreamcore, hazy, surreal lighting",
+            chaosAction: `A professional lawyer in a 90s wood-paneled office, intensely negotiating a contract with ${subject}. ${subject} is sentient and has a small mustache.`,
+            viralHook: "My lawyer is a potato (and he's winning).",
+            postProcessing: "Add 90s film grain and soft highlight rolloff.",
             difficulty: "Hard",
-            estimatedTime: "15 mins (Veo) + 5 mins post",
-            postProcessing: "Add cartoon chomping sounds. Screen shake on 'eating' moment.",
-            commonIssues: "Scale consistency is hard - use 'macro photography' keyword."
+            estimatedTime: "20 mins"
         })
     },
     {
-        category: "Digital Meltdown",
+        category: "Wabi-Sabi Perfection",
         template: (subject: string) => ({
-            chaosAction: `${subject} starts pixelating, then the entire world dissolve into green binary code matrix rain and Windows XP error popups.`,
-            visualStyle: "Cyberpunk, glitch art, VHS static, CRT monitor effect",
-            viralHook: "Simulation Glitch 👾",
-            platform: "Kling AI",
+            visualStyle: "January 2026 Trend: Wabi-sabi celebrating imperfections",
+            chaosAction: `${subject} slowly breaking and repairing itself with liquid gold in a loop (Kintsugi logic). Beautiful, flawed, and hypnotic.`,
+            viralHook: "Flaws are the feature.",
+            postProcessing: "Slow motion, golden glow effects.",
             difficulty: "Medium",
-            estimatedTime: "8 mins (Kling) + 5 mins post",
-            postProcessing: "Overlay Windows XP error sounds. Add CRT monitor filter.",
-            commonIssues: "Text renders poorly - focus on binary 'rain' visuals."
-        })
-    },
-    {
-        category: "AI Hallucination Loop",
-        template: (subject: string) => ({
-            chaosAction: `${subject} continuously morphs into different related objects every 0.5 seconds (e.g., Cat -> Tiger -> Bread -> Cloud -> Cat) in a seamless, dream-like loop.`,
-            visualStyle: "DeepDream aesthetic, morphing, surrealism, fluid transitions",
-            viralHook: "Don't watch this while high 🍄",
-            platform: "Luma (Loop mode)",
-            difficulty: "Hard",
-            estimatedTime: "12 mins (Luma) + 5 mins post",
-            postProcessing: "Add psychedelic trance music. Loop the video perfectly.",
-            commonIssues: "Morphing can look ugly - use 'smooth transition' keyword."
+            estimatedTime: "12 mins"
         })
     }
 ];

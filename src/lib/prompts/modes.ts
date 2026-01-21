@@ -17,6 +17,7 @@ import {
     getCameraMovements,
     getLightingSetups,
     getPhysicsKeywords,
+    getCompressionGuidelines,
     apply90sVintage,
     applyVHSEffect
 } from './library';
@@ -49,6 +50,7 @@ export function getCinematicPrompt(object: string, targetModel?: string, personD
     const platformInstructions = getPlatformInstructions(targetModel);
     const cameraMoves = getCameraMovements();
     const lightSetups = getLightingSetups();
+    const compression = getCompressionGuidelines();
 
     const subject = personDescription ? enhancePersonDescription(personDescription) : `The ${object}`;
 
@@ -65,9 +67,15 @@ ${platformInstructions}
 **SCENARIO:** ${scenario.category}
 **MOOD:** ${template.mood}
 
+**TOKEN COMPRESSION PLAYBOOK (2026):**
+${compression}
+
 **YOUR TASK:**
-Write a highly detailed, professional video prompt following the syntax structure above.
-The prompt must describe:
+Write a professional video prompt following the structure of the target platform.
+- Follow the word count limits precisely (e.g., 20-50 for Runway, 300+ for Veo).
+- Describe OUTCOMES and BEHAVIORS, not technical simulation jargon.
+- Use specific camera and lighting terms provided below.
+
 1. **SUBJECT:** ${template.photoPlacement}
 2. **ACTION:** ${template.cinematicAction}
 3. **CAMERA:** ${template.cameraWork}
@@ -82,17 +90,14 @@ ${lightSetups}
 **OUTPUT FORMAT:**
 Return a JSON object with:
 {
-  "prompt": "The detailed prompt text...",
+  "prompt": "The compressed/optimized prompt text...",
   "hook": "${template.viralHook}",
   "personNote": "${personDescription ? 'Ensure character consistency' : ''}",
   "expectedViews": "${template.expectedViews}",
   "difficulty": "${template.difficulty}",
   "estimatedTime": "${template.estimatedTime}",
   "postProcessing": "${template.postProcessing}",
-  "platformSpecific": {
-     "kling": "Specific tips for Kling...",
-     "runway": "Specific tips for Runway..."
-  }
+  "platformSpecific": {}
 }
 `;
 
@@ -103,6 +108,7 @@ Return a JSON object with:
 export function getShockingPrompt(object: string, targetModel?: string, personDescription?: string) {
     const platformInstructions = getPlatformInstructions(targetModel);
     const physics = getPhysicsKeywords();
+    const compression = getCompressionGuidelines();
 
     const subject = personDescription ? enhancePersonDescription(personDescription) : `The ${object}`;
     const scenario = viralShockScenarios[Math.floor(Math.random() * viralShockScenarios.length)];
@@ -115,24 +121,29 @@ Your goal is to create a prompt that stops the scroll instantly.
 **TARGET PLATFORM:** ${targetModel?.toUpperCase() || 'GENERAL'}
 ${platformInstructions}
 
+**TOKEN COMPRESSION PLAYBOOK (2026):**
+${compression}
+
 **SCENARIO:** ${scenario.category}
 **VIRAL HOOK:** ${template.viralHook}
 
 **YOUR TASK:**
-Write a prompt that generates a SHOCKING, HIGH-IMPACT video.
-The prompt must describe:
+Write a SHOCKING, HIGH-IMPACT video prompt.
+- Respect the word count limits of the target platform.
+- Describe BEHAVIORS of physics (e.g. "shatters") rather than jargon.
+
 1. **SETUP:** ${template.photoPlacement}
 2. **THE SHOCK:** ${template.shockAction}
 3. **TIMING:** ${template.timing}
 4. **PHYSICS:** ${template.physicsDetails}
 
-**PHYSICS KEYWORDS TO USE:**
+**PHYSICS GUIDELINES:**
 ${physics}
 
 **OUTPUT FORMAT:**
 Return a JSON object with:
 {
-  "prompt": "The detailed prompt text...",
+  "prompt": "The compressed/optimized prompt text...",
   "hook": "${template.viralHook}",
   "personNote": "${personDescription ? 'Ensure character consistency' : ''}",
   "expectedViews": "${template.viewsRange}",
@@ -148,6 +159,7 @@ Return a JSON object with:
 // ===== 3. CHAOS MODE =====
 export function getChaosPrompt(object: string, targetModel?: string, personDescription?: string) {
     const platformInstructions = getPlatformInstructions(targetModel);
+    const compression = getCompressionGuidelines();
 
     const subject = personDescription ? enhancePersonDescription(personDescription) : `The ${object}`;
     const scenario = chaosScenarios[Math.floor(Math.random() * chaosScenarios.length)];
@@ -160,18 +172,24 @@ Your goal is to create a video that breaks reality and confuses the viewer (in a
 **TARGET PLATFORM:** ${targetModel?.toUpperCase() || 'GENERAL'}
 ${platformInstructions}
 
+**TOKEN COMPRESSION PLAYBOOK (2026):**
+${compression}
+
 **SCENARIO:** ${scenario.category}
 **VISUAL STYLE:** ${template.visualStyle}
 
 **YOUR TASK:**
-Write a prompt that generates a MIND-BENDING, CHAOTIC video.
+Write a MIND-BENDING, CHAOTIC video prompt.
+- **Formulas**: Use recognizably familiar formats with unexpected twists.
+- **Chaos Aesthetics**: Bodycam, Dreamcore, and Character Role Swaps are trending.
+
 1. **ACTION:** ${template.chaosAction}
 2. **STYLE:** Use glitch art and surrealist keywords.
 
 **OUTPUT FORMAT:**
 Return a JSON object with:
 {
-  "prompt": "The detailed prompt text...",
+  "prompt": "The compressed/optimized prompt text...",
   "hook": "${template.viralHook}",
   "personNote": "${personDescription ? 'Ensure character consistency' : ''}",
   "expectedViews": "Unknown (Viral Wildcard)",

@@ -63,38 +63,69 @@ export const getLightingSetups = () => `
 - Colored Gel: Theater-style colored lighting, bold mood
 `;
 
-// ===== PHYSICS KEYWORDS =====
+// ===== PHYSICS KEYWORDS (2026 UPDATED) =====
 export const getPhysicsKeywords = () => `
-**2026 ADVANCED PHYSICS KEYWORD LIBRARY:**
+**2026 OUTCOME-BASED PHYSICS (The "Behavior" Library):**
 
-**Fluid Dynamics:**
-- Water: splash, cascade, ripple, pour, drip, stream, gush, wave, spray
-- Viscosity: thick flow, viscous pour, syrupy motion, honey drip
-- Surface: surface tension, ripple propagation, capillary waves
+*Note: For Kling AI, use technical terms. For others, describe behaviors.*
 
-**Collision & Impact:**
-- Vehicle: T-bone, head-on, rollover, sideswipe, crumple zones
-- Breakage: shatter, fracture, spiderweb crack, fragment scatter
-- Deformation: crumple, bend, compress, dent
+**Fluid & Liquid:**
+- Behavioral: "water flows naturally", "ripples propagate outward", "liquid splashes and beads"
+- Technical (Kling): "fluid dynamics", "realistic liquid viscosity", "surface tension simulation"
 
-**Particle Effects:**
-- Smoke: billowing smoke, smoke plumes, wispy trails
-- Dust: dust cloud, dust motes floating, debris cloud
-- Fire: sparks, embers, ash, flame particles
+**Impact & Forces:**
+- Behavioral: "objects impact and bounce realistically", "sparks scatter on hit", "shatters into sharp fragments"
+- Technical (Kling): "rigid body collisions", "momentum transfer", "fragmentation simulation"
 
-**Cloth & Fabric:**
-- Motion: billowing, flowing, rippling, draping, fluttering
-- Wind: wind-blown, caught in breeze, fabric lift
+**Atmospheric & Particles:**
+- Behavioral: "dust drifts in light", "smoke billows in plumes", "embers glow and fade"
+- Technical (Kling): "particle simulation", "volumetric fog", "sub-surface scattering"
+
+**Cloth & Hair:**
+- Behavioral: "fabric sways in wind", "hair flows naturally with movement", "drapes over surfaces"
+- Technical (Kling): "cloth physics", "hair collision detection", "soft body dynamics"
 `;
 
-// ===== AESTHETIC FILTERS =====
+// ===== TOKEN COMPRESSION PLAYBOOK (2026) =====
+export const getCompressionGuidelines = () => `
+**TOKEN COMPRESSION PLAYBOOK (Achieve 30-50% Reduction):**
+
+**Phase 1: Remove Redundancy**
+- Strip conversational filler ("please", "I would like").
+- Replace multiple adjectives with one "Power Word".
+- Remove quality modifiers ("high quality", "4k") unless mandatory.
+
+**Phase 2: Information Hierarchy**
+- Lead with [Style] + [Camera] + [Subject].
+- Action must have a clear starting point and ENDPOINT.
+- Focus on outcomes and behaviors, not mechanics.
+
+**Phase 3: Image-to-Video Rules**
+- NEVER describe what is already in the reference image.
+- Focus exclusively on MOTION instructions (15-40 words).
+`;
+
+// ===== AESTHETIC FILTERS (2026 UPDATED) =====
+
+export const applyBodycamComedy = () => `
+**2026 BODYCAM COMEDY AESTHETIC:**
+- **Visuals:** Distorted fish-eye lens (bodycam POV), chest-mounted perspective, shaky movement
+- **Overlay:** Blurry timestamp, "POLICE" or "REC" indicators, low-bitrate artifacts
+- **Vibe:** Absurd subject handled with extreme seriousness/professionalism
+`;
+
+export const applyDreamcore = () => `
+**DREAMCORE / WEIRDCORE AESTHETIC:**
+- **Visuals:** Liminal spaces, hazy pastels, nostalgic fog, slightly out-of-focus subjects
+- **Details:** Cognitive dissonance, out-of-place objects, retro-digital textures
+- **Vibe:** Nostalgic unease, surreal peace
+`;
 
 export const apply90sVintage = () => `
 **90s BOLLYWOOD AESTHETIC:**
 - **Film Stock:** Kodak Vision3 500T (warm golden bias)
 - **Texture:** Fine 35mm grain, subtle halation, soft highlight rolloff
 - **Color:** Warm 3200K tungsten correction, slight magenta shadows
-- **Lighting:** Golden hour, rim/hair light, soft key
 - **Vibe:** Romantic, nostalgic, Udit Narayan style
 `;
 
