@@ -16,6 +16,7 @@ export interface SceneOutline {
     volume?: 'INT' | 'EXT'; // Method 5: Scene Boxing
     description: string;
     masterVisuals: string; // Method 1: The "Source of Truth" block
+    masterLayout: string; // Method 7: Geography Anchor (Left/Right/Center)
     charactersInvolved: string[];
     clipCount: number;
     seed?: number; // Method 3: Seed Locking for the entire scene
@@ -30,6 +31,7 @@ export interface ClipPrompt {
     prompt: string; // The actual Veo prompt
     negativePrompt: string; // Method 2: The "Shield"
     seed: number;
+    masterLayout?: string; // Method 7: Geography Anchor
     continuityNote: string; // How this connects to next clip
     audioSuggestion: string;
     narratorScript: string;
@@ -109,6 +111,7 @@ function buildVeoPrompt(
         action: string;
         setting: string;
         masterVisuals?: string;
+        masterLayout?: string;
         negativePrompt?: string;
         seed?: number;
         camera: string;
@@ -130,6 +133,7 @@ function buildVeoPrompt(
 
 [SCENE MASTER]: ${scene.masterVisuals || scene.setting}
 
+${scene.masterLayout ? `[MASTER LAYOUT]: ${scene.masterLayout}\n` : ''}
 [CHARACTERS]: ${charBlock}
 
 [ACTION]: ${scene.action}
@@ -205,7 +209,8 @@ OUTPUT (JSON only, no markdown):
       "sceneNumber": 1,
       "sceneType": "intro|action|dialogue|flashback|climax|transition",
       "volume": "INT|EXT",
-      "masterVisuals": "A technical 'Source of Truth' description of the setting. Include materials, landmarks, and fixed structures. NEVER mention characters or action here.",
+      "masterVisuals": "A technical 'Source of Truth' description of the setting materials and lighting.",
+      "masterLayout": "A strict 3D map (Method 7). Define: LEFT SIDE: [Object], RIGHT SIDE: [Object], CENTER/BACKGROUND: [Landmarks]. Who is where? ALWAYS maintain these positions.",
       "description": "What happens in this scene.",
       "charactersInvolved": ["Character Name 1"],
       "clipCount": 3,
@@ -293,12 +298,13 @@ CRITICAL RULES FOR PRODUCTION CONSISTENCY:
 2. NEGATIVE PROMPTING (Method 2): Use the "negativePrompt" field to ban materials or lighting that might drift (e.g., ban 'wood' if the bridge is concrete).
 3. SEED LOCKING (Method 3): Use the same Seed provided in the scene context for all clips in this scene.
 4. IMAGE ANCHORING (Method 4): If this is Clip 2 or 3, refer to the "previousClipEnd" visually to ensure the camera angle change feels logical.
-5. SCENE BOXING (Method 5): Verify the 'Volume' of the scene. If INT, do not describe any exterior terrain unless it is specifically 'through a window' or 'visible outside'. This prevents character 'teleportation' to the street.
-6. SPATIAL LAYERING (Method 6 - THE FIX): To prevent the AI from squeezing distant objects into the foreground, you MUST use Depth Labels.
-   - RULE: Define the scene in layers: [FOREGROUND], [MIDGROUND], [BACKGROUND].
-   - RULE: Use "Extreme Depth of Field" to ensure distance separation.
-   - BANNED: Do not use "time" or "movement" words (e.g. 'glides', 'pans', 'rotates') in the 'action' or 'prompt' description. The AI creates a static frame; movement must ONLY be described in the 'camera' field.
-7. CHARACTER TOKENS: You MUST include full visual DNA for every character.
+5. SCENE BOXING (Method 5): Verify the 'Volume' of the scene. If INT, do not describe any exterior terrain unless it is specifically 'through a window' or 'visible outside'.
+6. SPATIAL LAYERING (Method 6): Define layers: [FOREGROUND], [MIDGROUND], [BACKGROUND]. Use "Extreme Depth of Field".
+7. GEOGRAPHY ANCHORING (Method 7 - THE FIX): To prevent objects from swapping sides, you MUST start with the [MASTER LAYOUT] block. 
+   - RULE: Explicitly state what is on the LEFT and what is on the RIGHT. 
+   - Example: "7-Eleven is on the RIGHT. The bicycle is on the LEFT."
+   - BANNED: Do not change these positions between clips.
+8. CHARACTER TOKENS: You MUST include full visual DNA for every character.
    - Example: "**Haru Aizawa** (messy ash-brown hair, dark gray coat, faded scarf)"
 8. SPATIAL BLOCKING: Define foreground/background layout clearly.
 9. LOCATION BRIDGING: Mention established landmarks in the distant background.
@@ -316,6 +322,7 @@ export function compileFinalPrompt(
         setting: string;
         mood: string;
         masterVisuals?: string;
+        masterLayout?: string;
         negativePrompt?: string;
         seed?: number;
         characters: ParsedCharacter[];
@@ -329,6 +336,7 @@ export function compileFinalPrompt(
         action: clipData.action,
         setting: clipData.setting,
         masterVisuals: clipData.masterVisuals,
+        masterLayout: clipData.masterLayout,
         negativePrompt: clipData.negativePrompt,
         seed: clipData.seed,
         camera: clipData.camera,
@@ -371,6 +379,7 @@ export function parseClipResponse(content: string): ClipPrompt | null {
             prompt: data.prompt || '',
             negativePrompt: data.negativePrompt || '',
             seed: data.seed || Math.floor(Math.random() * 9000000) + 1000000,
+            masterLayout: data.masterLayout,
             continuityNote: data.endState || '',
             audioSuggestion: data.audioNote || '',
             narratorScript: data.narratorScript || ''

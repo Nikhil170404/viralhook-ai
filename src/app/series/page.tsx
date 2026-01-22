@@ -33,6 +33,7 @@ interface Scene {
     volume?: string;
     description: string;
     masterVisuals: string;
+    masterLayout: string;
     charactersInvolved: string[];
     clipCount: number;
     seed: number;
@@ -45,6 +46,7 @@ interface Clip {
     status: 'pending' | 'generating' | 'completed';
     prompt?: string;
     negativePrompt?: string;
+    masterLayout?: string;
     seed?: number;
     continuityNote?: string;
     audioSuggestion?: string;
@@ -279,6 +281,7 @@ export default function SeriesPageV2() {
                     scenes: (result.scenes || []).map((s: any) => ({
                         ...s,
                         masterVisuals: s.masterVisuals || s.description,
+                        masterLayout: s.masterLayout || "",
                         seed: s.seed || Math.floor(Math.random() * 9000000) + 1000000,
                         clips: Array(s.clipCount || 2).fill(0).map((_, i) => ({
                             clipNumber: i + 1,
@@ -369,6 +372,7 @@ export default function SeriesPageV2() {
                         volume: scene.volume,
                         description: scene.description,
                         masterVisuals: scene.masterVisuals,
+                        masterLayout: scene.masterLayout,
                         seed: scene.seed,
                         charactersInvolved: scene.charactersInvolved,
                         clipCount: scene.clips.length
@@ -404,6 +408,7 @@ export default function SeriesPageV2() {
                     status: 'completed',
                     prompt: result.prompt,
                     negativePrompt: result.negativePrompt,
+                    masterLayout: result.masterLayout,
                     seed: result.seed,
                     continuityNote: result.continuityNote || result.endState,
                     audioSuggestion: result.audioSuggestion || result.audioNote,
@@ -1069,6 +1074,13 @@ Name: Mina Aoyama
                                                         <div className="mb-3 p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                                                             <span className="text-[10px] font-bold text-purple-400 block mb-1 uppercase tracking-wider">Method 1: Scene Master (Environment DNA)</span>
                                                             <p className="text-[11px] text-gray-300 leading-relaxed italic">"{scene.masterVisuals}"</p>
+                                                        </div>
+                                                    )}
+
+                                                    {scene.masterLayout && (
+                                                        <div className="mb-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                                            <span className="text-[10px] font-bold text-blue-400 block mb-1 uppercase tracking-wider">Method 7: Geography Anchor (Spatial DNA)</span>
+                                                            <p className="text-[10px] text-gray-400 leading-relaxed font-mono whitespace-pre-wrap">{scene.masterLayout}</p>
                                                         </div>
                                                     )}
 

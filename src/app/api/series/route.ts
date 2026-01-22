@@ -44,6 +44,7 @@ interface SeriesRequest {
         volume?: string; // Method 5: Scene Boxing
         description: string;
         masterVisuals?: string;
+        masterLayout?: string; // Method 7: Geography Anchor
         seed?: number;
         charactersInvolved: string[];
         clipCount: number;
@@ -135,6 +136,7 @@ export async function POST(req: Request) {
                     volume: scene.volume as any,
                     description: scene.description,
                     masterVisuals: scene.masterVisuals || scene.description,
+                    masterLayout: scene.masterLayout || "",
                     charactersInvolved: scene.charactersInvolved,
                     clipCount: scene.clipCount,
                     seed: scene.seed
