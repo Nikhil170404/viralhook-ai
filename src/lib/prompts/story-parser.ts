@@ -322,7 +322,7 @@ export function formatCharactersForPrompt(characters: ParsedCharacter[]): string
  */
 export function formatAssetsForPrompt(assets: StoryAsset[]): string {
     return assets.map(a =>
-        `[OBJECT: ${a.name.toUpperCase()}]: ${a.visualDNA}`
+        `[LANDMARK/OBJECT: ${a.name.toUpperCase()}]: VISUAL DESCRIPTION: ${a.visualDNA}`
     ).join('\n');
 }
 

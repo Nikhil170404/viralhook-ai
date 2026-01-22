@@ -31,8 +31,10 @@ interface Scene {
     sceneNumber: number;
     sceneType: string;
     description: string;
+    masterVisuals: string;
     charactersInvolved: string[];
     clipCount: number;
+    seed: number;
     endState?: string;
     clips: Clip[];
 }
@@ -41,6 +43,8 @@ interface Clip {
     clipNumber: number;
     status: 'pending' | 'generating' | 'completed';
     prompt?: string;
+    negativePrompt?: string;
+    seed?: number;
     continuityNote?: string;
     audioSuggestion?: string;
     narratorScript?: string;
@@ -273,6 +277,8 @@ export default function SeriesPageV2() {
                     summary: result.summary || '',
                     scenes: (result.scenes || []).map((s: any) => ({
                         ...s,
+                        masterVisuals: s.masterVisuals || s.description,
+                        seed: s.seed || Math.floor(Math.random() * 9000000) + 1000000,
                         clips: Array(s.clipCount || 2).fill(0).map((_, i) => ({
                             clipNumber: i + 1,
                             status: 'pending' as const
@@ -282,13 +288,33 @@ export default function SeriesPageV2() {
                     createdAt: new Date().toISOString()
                 };
 
-                setSeriesState(prev => ({
-                    ...prev,
-                    episodes: [
-                        ...prev.episodes.filter(e => e.episodeNumber !== episodeNumber),
-                        newEpisode
-                    ].sort((a, b) => a.episodeNumber - b.episodeNumber)
-                }));
+                setSeriesState(prev => {
+                    // Process discovered assets
+                    let updatedAssets = [...prev.assets];
+                    if (result.discoveredAssets && Array.isArray(result.discoveredAssets)) {
+                        for (const discovered of result.discoveredAssets) {
+                            const exists = updatedAssets.find(a => a.name.toLowerCase() === discovered.name.toLowerCase());
+                            if (!exists) {
+                                updatedAssets.push({
+                                    id: `asset_auto_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                                    name: discovered.name,
+                                    description: discovered.description,
+                                    visualDNA: discovered.description
+                                });
+                            }
+                        }
+                    }
+
+                    return {
+                        ...prev,
+                        assets: updatedAssets,
+                        story: prev.story ? { ...prev.story, assets: updatedAssets } : prev.story,
+                        episodes: [
+                            ...prev.episodes.filter(e => e.episodeNumber !== episodeNumber),
+                            newEpisode
+                        ].sort((a, b) => a.episodeNumber - b.episodeNumber)
+                    };
+                });
             }
         } catch (err: any) {
             alert('Error: ' + err.message);
@@ -340,6 +366,8 @@ export default function SeriesPageV2() {
                         sceneNumber: scene.sceneNumber,
                         sceneType: scene.sceneType,
                         description: scene.description,
+                        masterVisuals: scene.masterVisuals,
+                        seed: scene.seed,
                         charactersInvolved: scene.charactersInvolved,
                         clipCount: scene.clips.length
                     },
@@ -373,6 +401,8 @@ export default function SeriesPageV2() {
                 setSeriesState(prev => updateClipData(prev, episodeNumber, sceneIndex, clipIndex, {
                     status: 'completed',
                     prompt: result.prompt,
+                    negativePrompt: result.negativePrompt,
+                    seed: result.seed,
                     continuityNote: result.continuityNote || result.endState,
                     audioSuggestion: result.audioSuggestion || result.audioNote,
                     narratorScript: result.narratorScript
@@ -1026,8 +1056,19 @@ Name: Mina Aoyama
                                                         <h4 className="text-sm font-bold text-gray-300">
                                                             SCENE {scene.sceneNumber}: <span className="text-purple-400">{scene.sceneType.toUpperCase()}</span>
                                                         </h4>
-                                                        <span className="text-xs text-gray-500">{scene.clips.length} clips</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-xs font-mono text-gray-500">Seed: {scene.seed}</span>
+                                                            <span className="text-xs text-gray-500">{scene.clips.length} clips</span>
+                                                        </div>
                                                     </div>
+
+                                                    {scene.masterVisuals && (
+                                                        <div className="mb-3 p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                                                            <span className="text-[10px] font-bold text-purple-400 block mb-1 uppercase tracking-wider">Method 1: Scene Master (Environment DNA)</span>
+                                                            <p className="text-[11px] text-gray-300 leading-relaxed italic">"{scene.masterVisuals}"</p>
+                                                        </div>
+                                                    )}
+
                                                     <p className="text-xs text-gray-500 mb-3">{scene.description}</p>
 
                                                     {/* Clips */}
@@ -1068,8 +1109,18 @@ Name: Mina Aoyama
                                                                             </div>
                                                                         )}
                                                                         <div className="text-xs text-gray-400 font-mono bg-black/40 rounded p-2 max-h-32 overflow-y-auto">
+                                                                            <div className="flex items-center justify-between mb-2 pb-1 border-b border-white/10">
+                                                                                <span className="text-[10px] text-purple-400">VEOPROMPT V2</span>
+                                                                                <span className="text-[10px] text-gray-600">Seed: {clip.seed}</span>
+                                                                            </div>
                                                                             {clip.prompt}
                                                                         </div>
+                                                                        {clip.negativePrompt && (
+                                                                            <div className="p-2 bg-red-500/5 border border-red-500/10 rounded">
+                                                                                <span className="text-[10px] font-bold text-red-400 block mb-1 uppercase tracking-wider">Method 2: Negative Shield</span>
+                                                                                <p className="text-[10px] text-gray-500 font-mono">{clip.negativePrompt}</p>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 ) : clip.status === 'generating' ? (
                                                                     <div className="flex items-center gap-2 py-4 justify-center text-purple-400">

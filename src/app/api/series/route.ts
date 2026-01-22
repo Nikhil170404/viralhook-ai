@@ -14,6 +14,7 @@ import {
     getClipSystemPrompt,
     parseOutlineResponse,
     parseClipResponse,
+    SceneOutline,
     AnimeStyle,
     Mode
 } from '@/lib/prompts/series-v2';
@@ -41,6 +42,8 @@ interface SeriesRequest {
         sceneNumber: number;
         sceneType: string;
         description: string;
+        masterVisuals?: string;
+        seed?: number;
         charactersInvolved: string[];
         clipCount: number;
     };
@@ -129,8 +132,10 @@ export async function POST(req: Request) {
                     sceneNumber: scene.sceneNumber,
                     sceneType: scene.sceneType as any,
                     description: scene.description,
+                    masterVisuals: scene.masterVisuals || scene.description,
                     charactersInvolved: scene.charactersInvolved,
-                    clipCount: scene.clipCount
+                    clipCount: scene.clipCount,
+                    seed: scene.seed
                 },
                 clipNumber,
                 scene.clipCount,

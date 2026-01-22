@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Zap, ArrowRight, LogOut, Layout, Sparkles, Clock, Menu, X, Crown } from "lucide-react";
+import { Zap, ArrowRight, LogOut, Layout, Sparkles, Clock, Menu, X, Crown, Film } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -47,7 +47,7 @@ export function Navbar() {
     const navItems = [
         { href: '/generator', label: 'Generator', icon: Zap, match: '/generator', hideIfExists: true },
         { href: '/hooks', label: 'Hooks', icon: Sparkles, match: '/hooks' },
-        { href: '/series', label: 'Series', icon: Layout, match: '/series' },
+        { href: '/series', label: 'Series', icon: Film, match: '/series' },
         { href: '/library', label: 'Library', icon: Layout, match: '/library' },
         { href: '/history', label: 'History', icon: Clock, match: '/history' },
     ];

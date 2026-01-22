@@ -14,8 +14,11 @@ export interface SceneOutline {
     sceneNumber: number;
     sceneType: 'intro' | 'action' | 'dialogue' | 'flashback' | 'climax' | 'transition';
     description: string;
+    masterVisuals: string; // Method 1: The "Source of Truth" block
     charactersInvolved: string[];
     clipCount: number;
+    seed?: number; // Method 3: Seed Locking for the entire scene
+    referenceImageUrl?: string; // Method 4: Image Reference (optional)
     previousSceneEnd?: string; // For continuity
 }
 
@@ -24,6 +27,8 @@ export interface ClipPrompt {
     sceneNumber: number;
     duration: '8 seconds';
     prompt: string; // The actual Veo prompt
+    negativePrompt: string; // Method 2: The "Shield"
+    seed: number;
     continuityNote: string; // How this connects to next clip
     audioSuggestion: string;
     narratorScript: string;
@@ -35,6 +40,7 @@ export interface EpisodeOutline {
     summary: string;
     scenes: SceneOutline[];
     arcPosition: string;
+    discoveredAssets?: { name: string; description: string }[];
 }
 
 export type AnimeStyle = 'jjk' | 'demonslayer' | 'deathnote' | 'aot' | 'standard';
@@ -101,23 +107,29 @@ function buildVeoPrompt(
         characters: ParsedCharacter[];
         action: string;
         setting: string;
+        masterVisuals?: string;
+        negativePrompt?: string;
+        seed?: number;
         camera: string;
         mood: string;
         continuityFrom?: string;
     }
 ): string {
     const styleDNA = mode === 'anime' ? STYLE_DNA.anime[style] : STYLE_DNA.cartoon.standard;
-    const negatives = NEGATIVE_PROMPTS[mode];
+    const baseNegatives = NEGATIVE_PROMPTS[mode];
+    const combinedNegatives = scene.negativePrompt
+        ? `${baseNegatives}, ${scene.negativePrompt}`
+        : baseNegatives;
 
     // Build character block (exact visual DNA for consistency)
-    const charBlock = scene.characters.map(c => c.visualDNA).join('. ');
+    const charBlock = scene.characters.map(c => `**${c.name.toUpperCase()}** (${c.visualDNA})`).join('. ');
 
-    // Front-load important details (Veo prioritizes first 100 words)
-    const prompt = `[STYLE]: ${styleDNA}
+    // Front-load important details
+    const prompt = `[STYLE]: ${styleDNA} ${scene.seed ? `| Seed: ${scene.seed}` : ''}
+
+[SCENE MASTER]: ${scene.masterVisuals || scene.setting}
 
 [CHARACTERS]: ${charBlock}
-
-[SCENE]: ${scene.setting}
 
 [ACTION]: ${scene.action}
 
@@ -127,11 +139,9 @@ function buildVeoPrompt(
 
 ${scene.continuityFrom ? `[CONTINUITY]: Continues from: ${scene.continuityFrom}` : ''}
 
-[AUDIO ATMOSPHERE]: ${mode === 'anime' ? 'Epic orchestral, dramatic strings, impact bass' : 'Dynamic cartoon score, whoosh effects'}
+[NEGATIVE]: ${combinedNegatives}
 
-(no subtitles, no text overlays, no watermarks, consistent character design throughout)
-
-[NEGATIVE]: ${negatives}`.trim();
+(no subtitles, no text overlays, no watermarks, consistent character design throughout)`.trim();
 
     return prompt;
 }
@@ -180,19 +190,25 @@ CRITICAL PACING RULES:
 CRITICAL ACTION RULES:
 1. NO GROUP FIGHTS: In action scenes, break the clips down to focus on ONE character's specific move per clip. Do not ask for "The team fights the monster" in one shot (AI will glitch).
 2. EXAMPLE: Clip 1: Hero attacks. Clip 2: Villain reacts. Clip 3: Support character casts spell.
+3. **ASSET DISCOVERY (NEW)**: If you mention a specific building, vehicle, or unique object that is NOT in the "KEY OBJECTS" list above, you MUST add it to the "discoveredAssets" list in your JSON output with a detailed visual description. This ensures it stays consistent in future clips.
 
 OUTPUT (JSON only, no markdown):
 {
   "episodeTitle": "string",
   "summary": "2-3 sentence episode summary",
+  "discoveredAssets": [
+    { "name": "Object Name", "description": "Detailed visual description for Veo injection" }
+  ],
   "scenes": [
     {
       "sceneNumber": 1,
       "sceneType": "intro|action|dialogue|flashback|climax|transition",
-      "description": "What happens in this scene. IF ACTION: Focus on specific isolated beats.",
-      "charactersInvolved": ["Character Name 1" (or empty if landscape shot)],
+      "masterVisuals": "A technical 'Source of Truth' description of the setting. Include materials (e.g., 'gray cracked concrete slabs'), landmarks, and fixed structures. NEVER mention characters or action here.",
+      "description": "What happens in this scene.",
+      "charactersInvolved": ["Character Name 1"],
       "clipCount": 3,
-      "endState": "Brief description of how scene ends (for continuity)"
+      "seed": 1234567, // Generate a random 7-digit integer
+      "endState": "Brief description of how scene ends"
     }
   ],
   "cliffhanger": "Episode ending hook"
@@ -247,33 +263,32 @@ ${previousClipEnd ? `=== CONTINUITY ===\nPrevious clip ended with: ${previousCli
 === TASK ===
 1. Generate the Veo Video Prompt (visuals only).
 2. Generate a NARRATOR SCRIPT (voiceover).
+3. Generate a DYNAMIC NEGATIVE PROMPT (Method 2: The Shield) to ban unwanted elements (e.g., 'no wood' if concrete).
 
 === OUTPUT FORMAT (JSON only) ===
 {
   "clipNumber": ${clipNumber},
-  "action": "Specific 8-second action. KEEP IT SIMPLE.",
-  "camera": "One simple move (e.g. 'Pan Right'). NO orbital/compound moves.",
-  "setting": "Environment details. MUST MATCH SCENE TIME OF DAY.",
-  "mood": "Lighting and atmosphere. MUST MATCH SCENE.",
+  "action": "Specific 8-second action.",
+  "camera": "One simple move.",
+  "setting": "Environment details.",
+  "mood": "Lighting and atmosphere.",
+  "negativePrompt": "Comma separated list of things to EXCLUDE (Method 2). e.g., 'wood, planks, bright daylight'",
+  "seed": ${scene.seed || 'Generate random 7-digit integer if not provided'},
   "endState": "Exactly how this clip ends",
   "audioNote": "Sound effect suggestion",
   "narratorScript": "Voiceover line",
-  "prompt": "The complete Veo-ready prompt. MUST INCLUDE FULL VISUAL DNA FOR CHARACTERS."
+  "prompt": "The complete Veo-ready prompt. MUST START WITH [SCENE MASTER]: followed by the Master Visuals Block."
 }
 
-CRITICAL RULES FOR VEO:
-1. CHARACTER TOKENS (VITAL): You MUST include the full visual description (DNA) for every character mentioned in the prompt. NEVER just use a name. Even if you've mentioned them before, the AI resets every shot.
-   - WRONG: "Kaito looks up."
-   - RIGHT: "**Kaito Tsukishiro** (Jet-black hair with silver tips, deep violet eyes, long black combat coat with glowing runes) looks up."
-2. ASSET TOKENS (VITAL): You MUST include the full visual description (DNA) for every Key Object/Asset mentioned in the prompt.
-   - Example: "**Aether Node** (A colossal, translucent blue crystalline tower with jagged edges and a glowing golden core)"
-3. SPATIAL BLOCKING & BACKGROUND: You MUST define the layout of the scene. Who is in the foreground? Who is in the background ("person behind")? Describe their relative positions and poses to ensure the composition doesn't jump.
-   - Example: "Kaito is in the foreground, while Mina stands 10 feet behind him, looking over her shoulder."
-3. LOCATION ANCHORING: If the scene moves, describe the transition. Use landmarks from the previous clip to "anchor" the viewer. If the camera cuts to a new angle, explicitly state what is now visible in the background from the old position.
-4. CAMERA STABILITY: Use ONLY simple movements (Static, Pan, Tilt, Dolly, Zoom). NO "Orbital" or compound moves.
-5. ACTION CLARITY: Focus action on ONE character per clip.
-6. NPC DEFINITION: For generic NPCs (child, crowd), you MUST create a visual description (e.g. "Child: 10yo girl, yellow sweater") to avoid glitches.
-7. LIGHTING: Maintain strict continuity with previous clips (Day/Dusk/Night).
+CRITICAL RULES FOR PRODUCTION CONSISTENCY:
+1. THE "MASTER ASSET" BLOCK (Method 1): Every prompt MUST start with the [SCENE MASTER] block provided in the scene context. Do not change a single word of it between clips.
+2. NEGATIVE PROMPTING (Method 2): Use the "negativePrompt" field to ban materials or lighting that might drift (e.g., ban 'wood' if the bridge is concrete).
+3. SEED LOCKING (Method 3): Use the same Seed provided in the scene context for all clips in this scene.
+4. IMAGE ANCHORING (Method 4): If this is Clip 2 or 3, refer to the "previousClipEnd" visually to ensure the camera angle change feels logical.
+5. CHARACTER TOKENS: You MUST include full visual DNA for every character.
+   - Example: "**Haru Aizawa** (messy ash-brown hair, dark gray coat, faded scarf)"
+6. SPATIAL BLOCKING: Define foreground/background layout clearly.
+7. LOCATION BRIDGING: Mention established landmarks in the distant background.
 8. NO TEXT: Include "(no subtitles, no text)" at the end.`;
 }
 
@@ -287,6 +302,9 @@ export function compileFinalPrompt(
         camera: string;
         setting: string;
         mood: string;
+        masterVisuals?: string;
+        negativePrompt?: string;
+        seed?: number;
         characters: ParsedCharacter[];
         endState?: string;
     },
@@ -297,6 +315,9 @@ export function compileFinalPrompt(
         characters: clipData.characters,
         action: clipData.action,
         setting: clipData.setting,
+        masterVisuals: clipData.masterVisuals,
+        negativePrompt: clipData.negativePrompt,
+        seed: clipData.seed,
         camera: clipData.camera,
         mood: clipData.mood,
         continuityFrom: clipData.endState
@@ -335,6 +356,8 @@ export function parseClipResponse(content: string): ClipPrompt | null {
             sceneNumber: data.sceneNumber || 1,
             duration: '8 seconds',
             prompt: data.prompt || '',
+            negativePrompt: data.negativePrompt || '',
+            seed: data.seed || Math.floor(Math.random() * 9000000) + 1000000,
             continuityNote: data.endState || '',
             audioSuggestion: data.audioNote || '',
             narratorScript: data.narratorScript || ''
