@@ -220,6 +220,7 @@ CRITICAL CONSISTENCY RULES:
 1. SCENE BOXING (Method 5): Strictly separate interior (INT) and exterior (EXT). Do not describe the outside street in an INT scene unless it is 'visible through a window'.
 2. MASTER VISUALS (Method 1): The masterVisuals block MUST be technical and static (no movements, no characters).
 3. SEED LOCKING (Method 3): Generate a unique seed for each scene to ensure 'genetic' style consistency.
+4. SPATIAL LAYERING (Method 6): Plan scenes with depth. Identify what is in the [FOREGROUND] and what is in the [BACKGROUND] to avoid the "Time vs Space" conflation (squeezing everything into one layer).
 
 RULES:
 1. Use EXACT character names from the list above
@@ -293,11 +294,15 @@ CRITICAL RULES FOR PRODUCTION CONSISTENCY:
 3. SEED LOCKING (Method 3): Use the same Seed provided in the scene context for all clips in this scene.
 4. IMAGE ANCHORING (Method 4): If this is Clip 2 or 3, refer to the "previousClipEnd" visually to ensure the camera angle change feels logical.
 5. SCENE BOXING (Method 5): Verify the 'Volume' of the scene. If INT, do not describe any exterior terrain unless it is specifically 'through a window' or 'visible outside'. This prevents character 'teleportation' to the street.
-6. CHARACTER TOKENS: You MUST include full visual DNA for every character.
+6. SPATIAL LAYERING (Method 6 - THE FIX): To prevent the AI from squeezing distant objects into the foreground, you MUST use Depth Labels.
+   - RULE: Define the scene in layers: [FOREGROUND], [MIDGROUND], [BACKGROUND].
+   - RULE: Use "Extreme Depth of Field" to ensure distance separation.
+   - BANNED: Do not use "time" or "movement" words (e.g. 'glides', 'pans', 'rotates') in the 'action' or 'prompt' description. The AI creates a static frame; movement must ONLY be described in the 'camera' field.
+7. CHARACTER TOKENS: You MUST include full visual DNA for every character.
    - Example: "**Haru Aizawa** (messy ash-brown hair, dark gray coat, faded scarf)"
-6. SPATIAL BLOCKING: Define foreground/background layout clearly.
-7. LOCATION BRIDGING: Mention established landmarks in the distant background.
-8. NO TEXT: Include "(no subtitles, no text)" at the end.`;
+8. SPATIAL BLOCKING: Define foreground/background layout clearly.
+9. LOCATION BRIDGING: Mention established landmarks in the distant background.
+10. NO TEXT: Include "(no subtitles, no text)" at the end.`;
 }
 
 // ============================================================================
