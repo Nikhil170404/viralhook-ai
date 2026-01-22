@@ -18,11 +18,19 @@ export interface ParsedCharacter {
     backstory?: string;
 }
 
+export interface StoryAsset {
+    id: string;
+    name: string;
+    description: string;
+    visualDNA: string; // The locked description to inject
+}
+
 export interface ParsedStory {
     title: string;
     genre: string;
     worldRules: string;
     characters: ParsedCharacter[];
+    assets: StoryAsset[]; // New field
     episodeBrief: string;
     totalEpisodes: number;
     themes: string[];
@@ -155,6 +163,7 @@ export function parseStoryText(text: string): ParseResult {
 
     const result: Partial<ParsedStory> = {
         characters: [],
+        assets: [],
         themes: [],
         totalEpisodes: 24
     };
@@ -177,7 +186,7 @@ export function parseStoryText(text: string): ParseResult {
     }
 
     // === EXTRACT WORLD RULES ===
-    const worldMatch = text.match(/WORLD\s*RULES?\s*:\s*([\s\S]+?)(?=\n\s*(?:HERO|FRIEND|VILLAIN|MENTOR|RIVAL|CHARACTER|EPISODE|$))/i);
+    const worldMatch = text.match(/WORLD\s*RULES?\s*:\s*([\s\S]+?)(?=\n\s*(?:ASSETS|KEY\s*OBJECTS|HERO|FRIEND|VILLAIN|MENTOR|RIVAL|CHARACTER|EPISODE|$))/i);
     if (worldMatch) {
         result.worldRules = worldMatch[1].trim().replace(/\n+/g, ' ');
     } else {
@@ -185,14 +194,36 @@ export function parseStoryText(text: string): ParseResult {
     }
 
     // === EXTRACT EPISODE BRIEF ===
-    const episodeMatch = text.match(/EPISODE\s*(?:\d+[-–]\d+)?\s*(?:BRIEF|OVERVIEW|SUMMARY)?\s*:\s*([\s\S]+?)$/i);
+    const episodeMatch = text.match(/EPISODE\s*(?:\d+[-–]\d+)?\s*(?:BRIEF|OVERVIEW|SUMMARY)?\s*:\s*([\s\S]+?)(?=\n\s*(?:ASSETS|KEY\s*OBJECTS|HERO|FRIEND|VILLAIN|MENTOR|RIVAL|CHARACTER|$))/i);
     if (episodeMatch) {
+        result.episodeBrief = episodeMatch[1].trim();
         result.episodeBrief = episodeMatch[1].trim();
     } else {
         // Try to find episode descriptions anywhere
         const epLines = text.match(/Ep(?:isode)?\s*\d+[-–]?\d*\s*[:(]\s*[^)]+\)?/gi);
         if (epLines) {
             result.episodeBrief = epLines.join('\n');
+        }
+    }
+
+    // === EXTRACT ASSETS / KEY OBJECTS ===
+    const assetsMatch = text.match(/(?:ASSETS|KEY\s*OBJECTS)\s*:\s*([\s\S]+?)(?=\n\s*(?:HERO|FRIEND|VILLAIN|MENTOR|RIVAL|CHARACTER|EPISODE|$))/i);
+    if (assetsMatch) {
+        const assetLines = assetsMatch[1].split('\n').map(l => l.trim()).filter(Boolean);
+        for (const line of assetLines) {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex !== -1) {
+                const name = line.substring(0, colonIndex).trim();
+                const desc = line.substring(colonIndex + 1).trim();
+                if (name && desc) {
+                    result.assets!.push({
+                        id: `asset_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                        name,
+                        description: desc,
+                        visualDNA: desc
+                    });
+                }
+            }
         }
     }
 
@@ -284,6 +315,23 @@ export function formatCharactersForPrompt(characters: ParsedCharacter[]): string
     return characters.map(c =>
         `[${c.name.toUpperCase()}]: ${c.visualDNA}${c.powers ? ` | Powers: ${c.powers}` : ''}`
     ).join('\n');
+}
+
+/**
+ * Format assets for prompt injection
+ */
+export function formatAssetsForPrompt(assets: StoryAsset[]): string {
+    return assets.map(a =>
+        `[OBJECT: ${a.name.toUpperCase()}]: ${a.visualDNA}`
+    ).join('\n');
+}
+
+/**
+ * Get asset by name
+ */
+export function findAssetByName(assets: StoryAsset[], name: string): StoryAsset | undefined {
+    const lower = name.toLowerCase();
+    return assets.find(a => a.name.toLowerCase().includes(lower) || lower.includes(a.name.toLowerCase()));
 }
 
 /**

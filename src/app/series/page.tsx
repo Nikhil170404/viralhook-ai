@@ -7,11 +7,11 @@ import {
     Copy, Check, Sparkles, Zap, ChevronDown, ChevronRight,
     Film, User, Play, Brain, Cpu, RefreshCw, Wand2, Edit3,
     Users, Trash2, Plus, ArrowRight, AlertCircle, FileText,
-    Layers, Eye, Download, Settings2
+    Layers, Eye, Download, Settings2, Box
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/ui/navbar";
-import { parseStoryText, ParsedStory, ParsedCharacter, regenerateVisualDNA } from "@/lib/prompts/story-parser";
+import { parseStoryText, ParsedStory, ParsedCharacter, StoryAsset, regenerateVisualDNA } from "@/lib/prompts/story-parser";
 import { ANIME_STYLES, MODES, AnimeStyle, Mode } from "@/lib/prompts/series-v2";
 
 const supabase = createBrowserClient(
@@ -61,6 +61,7 @@ interface SeriesState {
     mode: Mode;
     style: AnimeStyle;
     totalEpisodes: number;
+    assets: StoryAsset[];
 }
 
 export default function SeriesPageV2() {
@@ -73,7 +74,8 @@ export default function SeriesPageV2() {
         episodes: [],
         mode: 'anime',
         style: 'jjk',
-        totalEpisodes: 12 // Default standard season length
+        totalEpisodes: 12, // Default standard season length
+        assets: []
     });
 
     // UI state
@@ -86,6 +88,7 @@ export default function SeriesPageV2() {
     const [aiModel, setAiModel] = useState("deepseek/deepseek-r1-0528:free");
     const [copiedField, setCopiedField] = useState<string | null>(null);
     const [editingChar, setEditingChar] = useState<ParsedCharacter | null>(null);
+    const [editingAsset, setEditingAsset] = useState<StoryAsset | null>(null);
 
     // Auth check
     useEffect(() => {
@@ -130,7 +133,8 @@ export default function SeriesPageV2() {
         setSeriesState(prev => ({
             ...prev,
             story: result.data!,
-            episodes: []
+            episodes: [],
+            assets: result.data!.assets || []
         }));
         setParseErrors([]);
         setParseWarnings(result.warnings);
@@ -182,11 +186,42 @@ export default function SeriesPageV2() {
         if (!confirm('Delete this character?')) return;
         setSeriesState(prev => ({
             ...prev,
-            story: {
-                ...prev.story!,
-                characters: prev.story!.characters.filter(c => c.id !== id)
-            }
+            story: prev.story ? {
+                ...prev.story,
+                characters: prev.story.characters.filter(c => c.id !== id)
+            } : null
         }));
+    }, []);
+
+    // Asset Management
+    const handleSaveAsset = useCallback(() => {
+        if (!editingAsset) return;
+
+        setSeriesState(prev => {
+            const exists = prev.assets.find(a => a.id === editingAsset.id);
+            const newAssets = exists
+                ? prev.assets.map(a => a.id === editingAsset.id ? editingAsset : a)
+                : [...prev.assets, editingAsset];
+
+            return {
+                ...prev,
+                assets: newAssets,
+                story: prev.story ? { ...prev.story, assets: newAssets } : prev.story
+            };
+        });
+        setEditingAsset(null);
+    }, [editingAsset]);
+
+    const handleDeleteAsset = useCallback((id: string) => {
+        if (!confirm('Delete this asset?')) return;
+        setSeriesState(prev => {
+            const newAssets = prev.assets.filter(a => a.id !== id);
+            return {
+                ...prev,
+                assets: newAssets,
+                story: prev.story ? { ...prev.story, assets: newAssets } : prev.story
+            };
+        });
     }, []);
 
     // Generate episode outline
@@ -299,6 +334,7 @@ export default function SeriesPageV2() {
                     episodeNumber,
                     mode: seriesState.mode,
                     style: seriesState.style,
+                    assets: seriesState.assets,
                     aiModel,
                     scene: {
                         sceneNumber: scene.sceneNumber,
@@ -394,7 +430,7 @@ export default function SeriesPageV2() {
     const handleReset = () => {
         if (!confirm('Delete everything and start over?')) return;
         localStorage.removeItem(STORAGE_KEY);
-        setSeriesState({ story: null, episodes: [], mode: 'anime', style: 'jjk', totalEpisodes: 12 });
+        setSeriesState({ story: null, episodes: [], mode: 'anime', style: 'jjk', totalEpisodes: 12, assets: [] });
         setStep('import');
         setImportText('');
         setSelectedEpisode(null);
@@ -617,14 +653,54 @@ Name: Mina Aoyama
                                 </div>
                             ))}
 
-                            {/* Add Character Button */}
+                        </div>
+
+                        {/* Assets Section */}
+                        <div className="mt-8 mb-4 flex items-center justify-between">
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                <Box className="w-5 h-5 text-pink-400" />
+                                Key Objects & Assets
+                            </h2>
                             <button
-                                onClick={handleAddCharacter}
-                                className="bg-white/5 border border-dashed border-white/20 rounded-xl p-8 flex flex-col items-center justify-center gap-2 hover:bg-white/10 hover:border-purple-500/30 transition-all"
+                                onClick={() => setEditingAsset({ id: `asset_${Date.now()}`, name: '', description: '', visualDNA: '' })}
+                                className="text-xs text-purple-400 hover:text-white flex items-center gap-1"
                             >
-                                <Plus className="w-8 h-8 text-purple-400" />
-                                <span className="text-gray-400">Add Character</span>
+                                <Plus className="w-3 h-3" /> Add Asset
                             </button>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                            {seriesState.assets.map(asset => (
+                                <div key={asset.id} className="bg-white/5 border border-white/10 rounded-xl p-4 hover:border-pink-500/30 transition-all">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <h3 className="text-sm font-bold text-pink-300">{asset.name}</h3>
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => setEditingAsset({ ...asset })}
+                                                className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white"
+                                            >
+                                                <Edit3 className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteAsset(asset.id)}
+                                                className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-gray-400 mb-2 truncate">{asset.description}</p>
+                                    <div className="bg-black/30 rounded-lg p-2 text-[10px] font-mono text-pink-200/70 break-all h-12 overflow-y-auto">
+                                        {asset.visualDNA}
+                                    </div>
+                                </div>
+                            ))}
+
+                            {seriesState.assets.length === 0 && (
+                                <div className="col-span-full py-8 text-center bg-white/5 border border-dashed border-white/10 rounded-xl">
+                                    <p className="text-xs text-gray-500 italic">No key objects defined. They help maintain consistency for buildings, artifacts, or locations.</p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Continue Button */}
@@ -766,6 +842,64 @@ Name: Mina Aoyama
                                                 className="flex-1 py-2 rounded-lg bg-purple-500 text-white font-bold"
                                             >
                                                 Save
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                </motion.div>
+                            )}
+
+                            {editingAsset && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                                    onClick={() => setEditingAsset(null)}
+                                >
+                                    <motion.div
+                                        initial={{ scale: 0.9 }}
+                                        animate={{ scale: 1 }}
+                                        exit={{ scale: 0.9 }}
+                                        className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-md w-full"
+                                        onClick={e => e.stopPropagation()}
+                                    >
+                                        <h3 className="text-xl font-bold mb-4 text-pink-400">Edit Key Object / Asset</h3>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Asset Name (e.g., Aether Node)</label>
+                                                <input
+                                                    type="text"
+                                                    value={editingAsset.name}
+                                                    onChange={e => setEditingAsset({ ...editingAsset, name: e.target.value })}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-pink-500/50"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Visual DNA / Description</label>
+                                                <textarea
+                                                    value={editingAsset.description}
+                                                    onChange={e => setEditingAsset({
+                                                        ...editingAsset,
+                                                        description: e.target.value,
+                                                        visualDNA: e.target.value
+                                                    })}
+                                                    placeholder="Detailed visual description to maintain consistency across shots..."
+                                                    className="w-full h-32 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white resize-none outline-none focus:border-pink-500/50"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3 mt-6">
+                                            <button
+                                                onClick={() => setEditingAsset(null)}
+                                                className="flex-1 py-2 rounded-lg border border-white/10 text-gray-400 hover:text-white"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={handleSaveAsset}
+                                                className="flex-1 py-2 rounded-lg bg-pink-500 text-white font-bold hover:bg-pink-600"
+                                            >
+                                                Save Asset
                                             </button>
                                         </div>
                                     </motion.div>

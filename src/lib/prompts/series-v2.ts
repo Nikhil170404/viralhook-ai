@@ -4,7 +4,7 @@
  * Supports: Anime style (Jujutsu Kaisen/Demon Slayer quality) + Cartoon style
  */
 
-import { ParsedCharacter, ParsedStory, formatCharactersForPrompt, findCharacterByName } from './story-parser';
+import { ParsedCharacter, ParsedStory, StoryAsset, formatCharactersForPrompt, formatAssetsForPrompt, findCharacterByName } from './story-parser';
 
 // ============================================================================
 // TYPES
@@ -148,6 +148,7 @@ export function getEpisodeOutlineSystemPrompt(
 ): string {
     const arcGuide = getArcGuidance(episodeNumber, totalEpisodes);
     const charList = formatCharactersForPrompt(story.characters);
+    const assetList = formatAssetsForPrompt(story.assets || []);
 
     return `You are an expert ${mode === 'anime' ? 'anime' : 'cartoon'} scriptwriter. Create Episode ${episodeNumber} outline for "${story.title}".
 
@@ -159,6 +160,9 @@ World: ${story.worldRules}
 
 === CHARACTERS ===
 ${charList}
+
+=== KEY OBJECTS / ASSETS ===
+${assetList}
 
 === EPISODE ${episodeNumber} CONTEXT ===
 Arc Guidance: ${arcGuide}
@@ -230,6 +234,9 @@ ${styleDNA}
 === CHARACTERS IN SCENE ===
 ${charBlock || 'No characters - Establishing Shot'}
 
+=== WORLD ASSETS ===
+${formatAssetsForPrompt(story.assets || [])}
+
 === SCENE CONTEXT ===
 Scene ${scene.sceneNumber}: ${scene.sceneType.toUpperCase()}
 Description: ${scene.description}
@@ -258,7 +265,9 @@ CRITICAL RULES FOR VEO:
 1. CHARACTER TOKENS (VITAL): You MUST include the full visual description (DNA) for every character mentioned in the prompt. NEVER just use a name. Even if you've mentioned them before, the AI resets every shot.
    - WRONG: "Kaito looks up."
    - RIGHT: "**Kaito Tsukishiro** (Jet-black hair with silver tips, deep violet eyes, long black combat coat with glowing runes) looks up."
-2. SPATIAL BLOCKING & BACKGROUND: You MUST define the layout of the scene. Who is in the foreground? Who is in the background ("person behind")? Describe their relative positions and poses to ensure the composition doesn't jump.
+2. ASSET TOKENS (VITAL): You MUST include the full visual description (DNA) for every Key Object/Asset mentioned in the prompt.
+   - Example: "**Aether Node** (A colossal, translucent blue crystalline tower with jagged edges and a glowing golden core)"
+3. SPATIAL BLOCKING & BACKGROUND: You MUST define the layout of the scene. Who is in the foreground? Who is in the background ("person behind")? Describe their relative positions and poses to ensure the composition doesn't jump.
    - Example: "Kaito is in the foreground, while Mina stands 10 feet behind him, looking over her shoulder."
 3. LOCATION ANCHORING: If the scene moves, describe the transition. Use landmarks from the previous clip to "anchor" the viewer. If the camera cuts to a new angle, explicitly state what is now visible in the background from the old position.
 4. CAMERA STABILITY: Use ONLY simple movements (Static, Pan, Tilt, Dolly, Zoom). NO "Orbital" or compound moves.
