@@ -31,6 +31,7 @@ interface Scene {
     sceneNumber: number;
     sceneType: string;
     volume?: string;
+    shotType?: string; // V3: Wide/Medium/Close-Up/XCU
     description: string;
     masterVisuals: string;
     masterLayout: string;
@@ -47,6 +48,8 @@ interface Clip {
     prompt?: string;
     negativePrompt?: string;
     masterLayout?: string;
+    shotType?: string;
+    motionDescription?: string; // 8-second motion for Veo VIDEO
     seed?: number;
     continuityNote?: string;
     audioSuggestion?: string;
@@ -69,6 +72,7 @@ interface SeriesState {
     style: AnimeStyle;
     totalEpisodes: number;
     assets: StoryAsset[];
+    aspectRatio: '16:9' | '9:16'; // V4: Aspect Ratio
 }
 
 export default function SeriesPageV2() {
@@ -81,6 +85,7 @@ export default function SeriesPageV2() {
         episodes: [],
         mode: 'anime',
         style: 'jjk',
+        aspectRatio: '16:9' as const,
         totalEpisodes: 12, // Default standard season length
         assets: []
     });
@@ -409,6 +414,8 @@ export default function SeriesPageV2() {
                     prompt: result.prompt,
                     negativePrompt: result.negativePrompt,
                     masterLayout: result.masterLayout,
+                    shotType: result.shotType,
+                    motionDescription: result.motionDescription,
                     seed: result.seed,
                     continuityNote: result.continuityNote || result.endState,
                     audioSuggestion: result.audioSuggestion || result.audioNote,
@@ -467,7 +474,7 @@ export default function SeriesPageV2() {
     const handleReset = () => {
         if (!confirm('Delete everything and start over?')) return;
         localStorage.removeItem(STORAGE_KEY);
-        setSeriesState({ story: null, episodes: [], mode: 'anime', style: 'jjk', totalEpisodes: 12, assets: [] });
+        setSeriesState({ story: null, episodes: [], mode: 'anime', style: 'jjk', aspectRatio: '16:9', totalEpisodes: 12, assets: [] });
         setStep('import');
         setImportText('');
         setSelectedEpisode(null);
@@ -507,9 +514,35 @@ export default function SeriesPageV2() {
                         </p>
                     </div>
                     {seriesState.story && (
-                        <button onClick={handleReset} className="text-sm text-gray-500 hover:text-red-400 flex items-center gap-1">
-                            <Trash2 className="w-4 h-4" /> Reset
-                        </button>
+                        <div className="flex items-center gap-3">
+                            {/* Aspect Ratio Toggle (V4) */}
+                            <div className="bg-gray-900/50 rounded-lg p-1 flex items-center border border-white/10">
+                                <button
+                                    onClick={() => setSeriesState(s => ({ ...s, aspectRatio: '16:9' }))}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5",
+                                        seriesState.aspectRatio === '16:9' ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20" : "text-gray-500 hover:text-gray-300"
+                                    )}
+                                >
+                                    <span className="w-4 h-2.5 border-[1.5px] border-current rounded-[1px]" />
+                                    16:9
+                                </button>
+                                <button
+                                    onClick={() => setSeriesState(s => ({ ...s, aspectRatio: '9:16' }))}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5",
+                                        seriesState.aspectRatio === '9:16' ? "bg-pink-500 text-white shadow-lg shadow-pink-500/20" : "text-gray-500 hover:text-gray-300"
+                                    )}
+                                >
+                                    <span className="w-2.5 h-4 border-[1.5px] border-current rounded-[1px]" />
+                                    9:16
+                                </button>
+                            </div>
+
+                            <button onClick={handleReset} className="text-sm text-gray-500 hover:text-red-400 flex items-center gap-1">
+                                <Trash2 className="w-4 h-4" /> Reset
+                            </button>
+                        </div>
                     )}
                 </div>
 

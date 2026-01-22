@@ -13,14 +13,16 @@ import { ParsedCharacter, ParsedStory, StoryAsset, formatCharactersForPrompt, fo
 export interface SceneOutline {
     sceneNumber: number;
     sceneType: 'intro' | 'action' | 'dialogue' | 'flashback' | 'climax' | 'transition';
-    volume?: 'INT' | 'EXT'; // Method 5: Scene Boxing
+    volume?: 'INT' | 'EXT'; // Scene Boxing
+    shotType?: 'Wide' | 'Medium' | 'Close-Up' | 'Extreme Close-Up'; // V3: Shot Type Lock
+    aspectRatio?: '16:9' | '9:16'; // V4: Vertical Video Support
     description: string;
-    masterVisuals: string; // Method 1: The "Source of Truth" block
-    masterLayout: string; // Method 7: Geography Anchor (Left/Right/Center)
+    masterVisuals: string; // Source of Truth block
+    masterLayout: string; // Geography Anchor (Left/Right/Center)
     charactersInvolved: string[];
     clipCount: number;
-    seed?: number; // Method 3: Seed Locking for the entire scene
-    referenceImageUrl?: string; // Method 4: Image Reference (optional)
+    seed?: number; // Seed Locking for the entire scene
+    referenceImageUrl?: string; // Image Reference (optional)
     previousSceneEnd?: string; // For continuity
 }
 
@@ -28,10 +30,13 @@ export interface ClipPrompt {
     clipNumber: number;
     sceneNumber: number;
     duration: '8 seconds';
+    shotType?: string; // Wide/Medium/Close-Up/XCU
+    motionDescription?: string; // 8-second motion description for Veo VIDEO
+    aspectRatio?: '16:9' | '9:16'; // V4: Vertical Video Support
     prompt: string; // The actual Veo prompt
-    negativePrompt: string; // Method 2: The "Shield"
+    negativePrompt: string; // The "Shield"
     seed: number;
-    masterLayout?: string; // Method 7: Geography Anchor
+    masterLayout?: string; // Geography Anchor
     continuityNote: string; // How this connects to next clip
     audioSuggestion: string;
     narratorScript: string;
@@ -101,7 +106,8 @@ function getArcGuidance(ep: number, totalEpisodes: number): string {
 // ============================================================================
 
 /**
- * Build Veo-optimized prompt (300-400 words, front-loaded detail)
+ * Build Veo-optimized prompt (Camera-First Structure)
+ * Formula: [Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance]
  */
 function buildVeoPrompt(
     mode: Mode,
@@ -117,6 +123,7 @@ function buildVeoPrompt(
         camera: string;
         mood: string;
         continuityFrom?: string;
+        aspectRatio?: '16:9' | '9:16';
     }
 ): string {
     const styleDNA = mode === 'anime' ? STYLE_DNA.anime[style] : STYLE_DNA.cartoon.standard;
@@ -125,28 +132,29 @@ function buildVeoPrompt(
         ? `${baseNegatives}, ${scene.negativePrompt}`
         : baseNegatives;
 
-    // Build character block (exact visual DNA for consistency)
+    // Subject Block
     const charBlock = scene.characters.map(c => `**${c.name.toUpperCase()}** (${c.visualDNA})`).join('. ');
 
-    // Front-load important details
-    const prompt = `[STYLE]: ${styleDNA} ${scene.seed ? `| Seed: ${scene.seed}` : ''}
+    // V4: Veo 2026 "Camera First" Structure
+    // 1. Cinematography (PRIORITY 1)
+    // 2. Subject
+    // 3. Action
+    // 4. Context (Setting + Layout)
+    // 5. Style
+    const prompt = `(Cinematography) ${scene.camera}. ${scene.aspectRatio === '9:16' ? 'Vertical 9:16 aspect ratio.' : 'Cinematic 16:9 aspect ratio.'}
 
-[SCENE MASTER]: ${scene.masterVisuals || scene.setting}
+(Subject) ${charBlock || 'No characters present.'}
 
-${scene.masterLayout ? `[MASTER LAYOUT]: ${scene.masterLayout}\n` : ''}
-[CHARACTERS]: ${charBlock}
+(Action) ${scene.action}
 
-[ACTION]: ${scene.action}
+(Context) ${scene.masterVisuals || scene.setting}
+${scene.masterLayout ? `Spatial Layout: ${scene.masterLayout}` : ''}
+${scene.mood}
 
-[CAMERA]: ${scene.camera}
+(Style) ${styleDNA}. Seed: ${scene.seed || 'auto'}.
+${scene.continuityFrom ? `Continues from: ${scene.continuityFrom}` : ''}
 
-[MOOD/LIGHTING]: ${scene.mood}
-
-${scene.continuityFrom ? `[CONTINUITY]: Continues from: ${scene.continuityFrom}` : ''}
-
-[NEGATIVE]: ${combinedNegatives}
-
-(no subtitles, no text overlays, no watermarks, consistent character design throughout)`.trim();
+Exclude: ${combinedNegatives}. (no subtitles, use colon syntax for dialogue, no text overlays)`.trim();
 
     return prompt;
 }
@@ -209,8 +217,9 @@ OUTPUT (JSON only, no markdown):
       "sceneNumber": 1,
       "sceneType": "intro|action|dialogue|flashback|climax|transition",
       "volume": "INT|EXT",
-      "masterVisuals": "A technical 'Source of Truth' description of the setting materials and lighting.",
-      "masterLayout": "A strict 3D map (Method 7). Define: LEFT SIDE: [Object], RIGHT SIDE: [Object], CENTER/BACKGROUND: [Landmarks]. Who is where? ALWAYS maintain these positions.",
+      "shotType": "Wide|Medium|Close-Up|Extreme Close-Up",
+      "masterVisuals": "Technical description of setting materials and lighting.",
+      "masterLayout": "Spatial map: LEFT SIDE: [Object], RIGHT SIDE: [Object], CENTER/BACKGROUND: [Landmarks].",
       "description": "What happens in this scene.",
       "charactersInvolved": ["Character Name 1"],
       "clipCount": 3,
@@ -246,7 +255,8 @@ export function getClipSystemPrompt(
     totalClipsInScene: number,
     mode: Mode,
     style: AnimeStyle,
-    previousClipEnd?: string
+    previousClipEnd?: string,
+    aspectRatio?: '16:9' | '9:16'
 ): string {
     // Get characters for this scene
     const sceneChars = scene.charactersInvolved
@@ -260,6 +270,7 @@ export function getClipSystemPrompt(
 
 === VISUAL STYLE ===
 ${styleDNA}
+Aspect Ratio: ${aspectRatio === '9:16' ? 'Vertical 9:16 (TikTok/Shorts)' : 'Cinematic 16:9 (TV/Youtube)'}
 
 === CHARACTERS IN SCENE ===
 ${charBlock || 'No characters - Establishing Shot'}
@@ -282,35 +293,41 @@ ${previousClipEnd ? `=== CONTINUITY ===\nPrevious clip ended with: ${previousCli
 === OUTPUT FORMAT (JSON only) ===
 {
   "clipNumber": ${clipNumber},
-  "action": "Specific 8-second action.",
-  "camera": "One simple move.",
+  "shotType": "Wide|Medium|Close-Up|Extreme Close-Up",
+  "motionDescription": "Describe the 8-SECOND MOTION. What moves? How does it move? Example: 'Haru walks slowly down the rain-slicked street. His coat sways in the wind. Camera tracks alongside him.'",
+  "action": "What is happening in this 8-second moment.",
+  "camera": "One camera movement over 8 seconds. Examples: 'Slow pan left to right', 'Static wide shot', 'Tracking shot following character'",
   "setting": "Environment details.",
   "mood": "Lighting and atmosphere.",
-  "negativePrompt": "Comma separated list of things to EXCLUDE (Method 2). e.g., 'wood, planks, bright daylight'",
+  "negativePrompt": "Comma separated list of things to EXCLUDE. e.g., 'wood, planks, bright daylight'",
   "seed": ${scene.seed || 'Generate random 7-digit integer if not provided'},
-  "endState": "Exactly how this clip ends",
+  "endState": "Exactly how this clip ends (final frame description)",
   "audioNote": "Sound effect suggestion",
   "narratorScript": "Voiceover line",
-  "prompt": "The complete Veo-ready prompt. MUST START WITH [SCENE MASTER]: followed by the Master Visuals Block."
+  "prompt": "The complete Veo-ready VIDEO prompt. NO BRACKETS. Natural language. Describe 8 seconds of continuous motion."
 }
 
-CRITICAL RULES FOR PRODUCTION CONSISTENCY:
-1. THE "MASTER ASSET" BLOCK (Method 1): Every prompt MUST start with the [SCENE MASTER] block provided in the scene context. Do not change a single word of it between clips.
-2. NEGATIVE PROMPTING (Method 2): Use the "negativePrompt" field to ban materials or lighting that might drift (e.g., ban 'wood' if the bridge is concrete).
-3. SEED LOCKING (Method 3): Use the same Seed provided in the scene context for all clips in this scene.
-4. IMAGE ANCHORING (Method 4): If this is Clip 2 or 3, refer to the "previousClipEnd" visually to ensure the camera angle change feels logical.
-5. SCENE BOXING (Method 5): Verify the 'Volume' of the scene. If INT, do not describe any exterior terrain unless it is specifically 'through a window' or 'visible outside'.
-6. SPATIAL LAYERING (Method 6): Define layers: [FOREGROUND], [MIDGROUND], [BACKGROUND]. Use "Extreme Depth of Field".
-7. GEOGRAPHY ANCHORING (Method 7): To prevent objects from swapping sides, use the [MASTER LAYOUT] block.
-8. CAMERA GEOMETRY & VECTOR CONTROL (Method 8 - THE FIX): To prevent the "Foreground Trap" (e.g., looking UP while moving DOWN):
-   - RULE: If the action is "Going Down" (stairs, slopes), the camera MUST be "High Angle" or "Bird's Eye," looking down from the top.
-   - RULE: If High Angle, the Foreground must be "The Top Landing" or "Character's Shoulders." NEVER put steps/risers in the foreground of a high-angle shot.
-   - RULE: Ensure the "Visual Vector" (where the character is moving) matches the "Camera Vector" (where the camera is looking).
-9. CHARACTER TOKENS: You MUST include full visual DNA for every character.
-   - Example: "**Haru Aizawa** (messy ash-brown hair, dark gray coat, faded scarf)"
-8. SPATIAL BLOCKING: Define foreground/background layout clearly.
-9. LOCATION BRIDGING: Mention established landmarks in the distant background.
-10. NO TEXT: Include "(no subtitles, no text)" at the end.`;
+CRITICAL RULES FOR VEO VIDEO GENERATION:
+1. MASTER ASSET BLOCK: Every prompt MUST include the Scene Master description unchanged.
+2. NEGATIVE PROMPTING: Use the "negativePrompt" field to ban materials that might drift.
+3. SEED LOCKING: Use the same Seed for all clips in this scene.
+4. IMAGE ANCHORING: If Clip 2+, reference the "previousClipEnd" visually.
+5. SCENE BOXING: If INT, no exterior terrain unless 'through a window'.
+6. SPATIAL LAYERING: Define FOREGROUND, MIDGROUND, BACKGROUND layers.
+7. GEOGRAPHY ANCHORING: Use the MASTER LAYOUT block to lock Left/Right/Center.
+8. CAMERA GEOMETRY: If "Going Down", use High Angle. If "Going Up", use Low Angle.
+9. VEO VIDEO MOTION (IMPORTANT):
+   - Veo generates 8-SECOND VIDEO CLIPS, not static images.
+   - Motion verbs ARE ALLOWED: "walks", "runs", "flies", "camera tracks left".
+   - Describe CONTINUOUS MOTION over 8 seconds, not frozen poses.
+   - Use natural video language: "Camera slowly pans from A to B over 8 seconds."
+10. SHOT TYPE: Specify one of: Wide, Medium, Close-Up, Extreme Close-Up.
+    - RULE: If "Wide", do NOT describe objects smaller than a human torso.
+    - RULE: If "Close-Up", do NOT describe distant landmarks.
+11. CHARACTER TOKENS: Include full visual DNA for every character.
+    - Example: "**Haru Aizawa** (messy ash-brown hair, dark gray coat, faded scarf)"
+12. LOCATION BRIDGING: Mention established landmarks in the distant background.
+13. NO TEXT: Include "(no subtitles, no text)" at the end.`;
 }
 
 // ============================================================================
@@ -329,6 +346,7 @@ export function compileFinalPrompt(
         seed?: number;
         characters: ParsedCharacter[];
         endState?: string;
+        aspectRatio?: '16:9' | '9:16';
     },
     mode: Mode,
     style: AnimeStyle
@@ -343,7 +361,8 @@ export function compileFinalPrompt(
         seed: clipData.seed,
         camera: clipData.camera,
         mood: clipData.mood,
-        continuityFrom: clipData.endState
+        continuityFrom: clipData.endState,
+        aspectRatio: clipData.aspectRatio
     });
 }
 
@@ -378,6 +397,9 @@ export function parseClipResponse(content: string): ClipPrompt | null {
             clipNumber: data.clipNumber,
             sceneNumber: data.sceneNumber || 1,
             duration: '8 seconds',
+            shotType: data.shotType,
+            motionDescription: data.motionDescription,
+            aspectRatio: data.aspectRatio,
             prompt: data.prompt || '',
             negativePrompt: data.negativePrompt || '',
             seed: data.seed || Math.floor(Math.random() * 9000000) + 1000000,

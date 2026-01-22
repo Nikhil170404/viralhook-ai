@@ -37,6 +37,7 @@ interface SeriesRequest {
     mode: Mode;
     style: AnimeStyle;
     aiModel?: string;
+    aspectRatio?: '16:9' | '9:16'; // V4: Vertical Video Support
     // For clip generation
     scene?: {
         sceneNumber: number;
@@ -145,7 +146,8 @@ export async function POST(req: Request) {
                 scene.clipCount,
                 mode,
                 style,
-                previousClipEnd
+                previousClipEnd,
+                body.aspectRatio
             );
             userPrompt = `Generate Clip ${clipNumber} prompt now.`;
         }
