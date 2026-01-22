@@ -108,6 +108,99 @@ export default function SeriesPage() {
     const [editingChar, setEditingChar] = useState<Character | null>(null);
     const [showCharForm, setShowCharForm] = useState(false);
 
+    // Import Mode
+    const [showImport, setShowImport] = useState(false);
+    const [importText, setImportText] = useState("");
+
+    // Parse imported story text
+    const parseImportedStory = (text: string) => {
+        try {
+            // Extract series info
+            const titleMatch = text.match(/SERIES TITLE:\s*(.+)/i);
+            const genreMatch = text.match(/GENRE:\s*(.+)/i);
+            // Use [\s\S] instead of dotAll flag for compatibility
+            const worldMatch = text.match(/WORLD RULES:\s*([\s\S]+?)(?=\n\n|---|\n[A-Z])/i);
+
+            if (!titleMatch) {
+                setError("Could not find SERIES TITLE in the text");
+                return;
+            }
+
+            const parsedTitle = titleMatch[1].trim();
+            const parsedGenre = genreMatch ? genreMatch[1].trim() : "Action/Adventure";
+            const parsedWorld = worldMatch ? worldMatch[1].trim() : "";
+
+            // Extract all characters (HERO, FRIEND, VILLAIN patterns)
+            const characterBlocks = text.split(/(?=(?:HERO|FRIEND|MAIN VILLAIN|VILLAIN|ALLY|MENTOR|RIVAL)\s*(?:\d*\s*)?CHARACTER:|(?:HERO|FRIEND|MAIN VILLAIN|VILLAIN|ALLY|MENTOR|RIVAL)\s*\d*:)/i);
+
+            const characters: Character[] = [];
+
+            for (const block of characterBlocks) {
+                if (!block.trim()) continue;
+
+                const nameMatch = block.match(/Name:\s*(.+)/i);
+                if (!nameMatch) continue;
+
+                const roleMatch = block.match(/Role:\s*(.+)/i) || block.match(/(hero|friend|villain|ally|mentor|rival)/i);
+                const genderMatch = block.match(/Gender:\s*(.+)/i);
+                const ageMatch = block.match(/Age:\s*(\d+)/i);
+                const hairMatch = block.match(/Hair:\s*(.+)/i);
+                const eyesMatch = block.match(/Eyes:\s*(.+)/i);
+                const outfitMatch = block.match(/Outfit:\s*(.+)/i);
+                const personalityMatch = block.match(/Personality:\s*(.+)/i);
+                const powersMatch = block.match(/Powers:\s*(.+)/i);
+
+                let role: "hero" | "friend" | "villain" | "other" = "other";
+                const roleText = roleMatch ? roleMatch[1].toLowerCase() : "";
+                if (roleText.includes("hero")) role = "hero";
+                else if (roleText.includes("friend") || roleText.includes("ally")) role = "friend";
+                else if (roleText.includes("villain")) role = "villain";
+
+                characters.push({
+                    id: `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    name: nameMatch[1].trim(),
+                    role,
+                    gender: genderMatch ? genderMatch[1].trim().toLowerCase() : "male",
+                    age: ageMatch ? parseInt(ageMatch[1]) : 17,
+                    hair: hairMatch ? hairMatch[1].trim() : "",
+                    eyes: eyesMatch ? eyesMatch[1].trim() : "",
+                    outfit: outfitMatch ? outfitMatch[1].trim() : "",
+                    personality: personalityMatch ? personalityMatch[1].trim() : "",
+                    powers: powersMatch ? powersMatch[1].trim() : ""
+                });
+            }
+
+            if (characters.length === 0) {
+                setError("Could not find any characters in the text. Make sure format includes 'Name:', 'Role:', etc.");
+                return;
+            }
+
+            // Set all data
+            setSeriesData({
+                seriesBible: {
+                    title: parsedTitle,
+                    genre: parsedGenre,
+                    worldRules: parsedWorld,
+                    themes: []
+                },
+                characters,
+                episodes: []
+            });
+
+            setTitle(parsedTitle);
+            setWorldRules(parsedWorld);
+            setShowImport(false);
+            setImportText("");
+            setActivePanel("characters");
+            setError("");
+
+            alert(`✅ Imported successfully!\n\n📖 Series: ${parsedTitle}\n👥 Characters: ${characters.length}\n\nReview your characters and start generating episodes!`);
+
+        } catch (err: any) {
+            setError("Failed to parse story: " + err.message);
+        }
+    };
+
     // Auth check
     useEffect(() => {
         const checkAuth = async () => {
@@ -388,7 +481,17 @@ export default function SeriesPage() {
                     {activePanel === "setup" && (
                         <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
                             <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                                <h2 className="text-lg font-bold mb-4">Series Setup</h2>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-lg font-bold">Series Setup</h2>
+                                    <button
+                                        onClick={() => setShowImport(true)}
+                                        className="text-xs bg-purple-500/20 text-purple-300 px-3 py-1.5 rounded-lg hover:bg-purple-500/30 font-medium flex items-center gap-1.5"
+                                    >
+                                        <Sparkles className="w-3 h-3" />
+                                        Import from Story
+                                    </button>
+                                </div>
+
 
                                 <div className="space-y-4">
                                     <div>
@@ -778,6 +881,52 @@ export default function SeriesPage() {
                             </div>
                         </motion.div>
                     )}
+
+                    {/* IMPORT MODAL */}
+                    {showImport && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                            onClick={() => setShowImport(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9 }}
+                                animate={{ scale: 1 }}
+                                exit={{ scale: 0.9 }}
+                                className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-2xl w-full"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <h3 className="text-xl font-bold mb-2">Import from Story</h3>
+                                <p className="text-sm text-gray-400 mb-4">Paste your full story text (series info + characters) below. We'll automatically parse it.</p>
+
+                                <textarea
+                                    value={importText}
+                                    onChange={(e) => setImportText(e.target.value)}
+                                    placeholder="Paste output from ChatGPT here..."
+                                    className="w-full h-64 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono resize-none focus:border-purple-500/50 outline-none"
+                                />
+
+                                <div className="flex justify-end gap-3 mt-4">
+                                    <button
+                                        onClick={() => setShowImport(false)}
+                                        className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => parseImportedStory(importText)}
+                                        disabled={!importText.trim()}
+                                        className="px-6 py-2 rounded-lg bg-purple-500 text-white font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Import Everything
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+
                 </AnimatePresence>
             </div>
         </div>
