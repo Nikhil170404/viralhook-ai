@@ -45,8 +45,9 @@ export function Navbar() {
     };
 
     const navItems = [
-        { href: '/generator', label: 'Generator', icon: Zap, match: '/generator', hideIfExists: true }, // Logic handled in render
+        { href: '/generator', label: 'Generator', icon: Zap, match: '/generator', hideIfExists: true },
         { href: '/hooks', label: 'Hooks', icon: Sparkles, match: '/hooks' },
+        { href: '/series', label: 'Series', icon: Layout, match: '/series' },
         { href: '/library', label: 'Library', icon: Layout, match: '/library' },
         { href: '/history', label: 'History', icon: Clock, match: '/history' },
     ];
