@@ -6,21 +6,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Plus, Trash2, Copy, Check, Sparkles, Zap, ChevronDown, ChevronRight,
     Film, User, BookOpen, Play, Brain, Cpu, RefreshCw, Wand2, Edit3,
-    Users, Swords, Skull, Heart, Laugh, Moon, Settings, ArrowRight
+    Users, Swords, Skull, Heart, Laugh, Settings, ArrowRight, MessageSquare,
+    CheckCircle, Clock, Eye
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/ui/navbar";
-import { fetchWithCSRF } from "@/lib/api-client";
 
 const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// Step indicators
-const STEPS = ["Concept", "AI Review", "Generate"];
-
-// Genre options
+// Constants
 const GENRES = [
     { id: "action", name: "Action/Adventure", icon: Swords },
     { id: "fantasy", name: "Fantasy", icon: Wand2 },
@@ -30,64 +27,86 @@ const GENRES = [
     { id: "comedy", name: "Comedy", icon: Laugh },
 ];
 
-const HERO_AGES = ["teenager", "young adult", "adult"];
-const TEAM_SIZES = [
-    { id: "solo", name: "Solo Hero", desc: "Just the protagonist" },
-    { id: "2", name: "Small Team", desc: "Hero + 2 allies" },
-    { id: "4", name: "Full Squad", desc: "Hero + 4 allies" },
-];
-const VILLAIN_TYPES = [
-    { id: "single", name: "Single Enemy", desc: "One powerful antagonist" },
-    { id: "organization", name: "Evil Organization", desc: "Shadowy group with hierarchy" },
-    { id: "monster", name: "Monster/Demon", desc: "Non-human threat" },
-];
-const STYLES = [
-    { id: "dark", name: "Dark & Serious" },
-    { id: "balanced", name: "Balanced" },
-    { id: "light", name: "Light & Fun" },
-];
-
-// Intelligence Models (same as main generator)
 const INTELLIGENCE_MODELS = [
-    { id: "xiaomi/mimo-v2-flash:free", name: "Xiaomi MIMO v2 (Instant)", desc: "Fastest generation" },
-    { id: "deepseek/deepseek-r1-0528:free", name: "Deepseek R1 (Thinking)", desc: "Best quality with reasoning" },
-    { id: "tngtech/deepseek-r1t2-chimera:free", name: "R1T2 Chimera (Thinking)", desc: "Hybrid reasoning" },
-    { id: "tngtech/deepseek-r1t-chimera:free", name: "R1T Chimera (Thinking)", desc: "Balanced reasoning" },
+    { id: "xiaomi/mimo-v2-flash:free", name: "Xiaomi MIMO v2 (Instant)", desc: "Fastest" },
+    { id: "deepseek/deepseek-r1-0528:free", name: "Deepseek R1 (Thinking)", desc: "Best quality" },
+    { id: "tngtech/deepseek-r1t2-chimera:free", name: "R1T2 Chimera", desc: "Hybrid" },
 ];
 
-// Storage keys
 const STORAGE_KEY = "viralhook_series_data";
+
+interface Character {
+    id: string;
+    name: string;
+    role: "hero" | "friend" | "villain" | "other";
+    gender: string;
+    age: number;
+    hair: string;
+    eyes: string;
+    outfit: string;
+    personality: string;
+    powers: string;
+}
+
+interface Episode {
+    episodeNumber: number;
+    title: string;
+    summary: string;
+    scenes: any[];
+    createdAt: string;
+}
+
+interface SeriesData {
+    seriesBible: {
+        title: string;
+        genre: string;
+        worldRules: string;
+        themes: string[];
+    } | null;
+    characters: Character[];
+    episodes: Episode[];
+}
+
+const DEFAULT_CHARACTER: Character = {
+    id: "",
+    name: "",
+    role: "hero",
+    gender: "male",
+    age: 17,
+    hair: "Black, spiky",
+    eyes: "Brown, determined",
+    outfit: "School uniform with special accessory",
+    personality: "Brave, loyal, never gives up",
+    powers: "Hidden power awakening"
+};
 
 export default function SeriesPage() {
     const [session, setSession] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [currentStep, setCurrentStep] = useState(0);
 
-    // Step 1: Concept Form
-    const [genre, setGenre] = useState("action");
-    const [heroGender, setHeroGender] = useState("male");
-    const [heroAge, setHeroAge] = useState("teenager");
-    const [teamSize, setTeamSize] = useState("2");
-    const [villainType, setVillainType] = useState("organization");
-    const [style, setStyle] = useState("balanced");
-    const [customConcept, setCustomConcept] = useState("");
-    const [aiModel, setAiModel] = useState("xiaomi/mimo-v2-flash:free");
+    // Series Data
+    const [seriesData, setSeriesData] = useState<SeriesData>({
+        seriesBible: null,
+        characters: [],
+        episodes: []
+    });
 
-
-    // Step 2: AI-Generated Data
+    // UI State
+    const [activePanel, setActivePanel] = useState<"setup" | "characters" | "episodes">("setup");
     const [isGenerating, setIsGenerating] = useState(false);
-    const [seriesBible, setSeriesBible] = useState<any>(null);
-    const [characters, setCharacters] = useState<any[]>([]);
-    const [editingField, setEditingField] = useState<string | null>(null);
-
-    // Step 3: Episode Generation
-    const [episodeNumber, setEpisodeNumber] = useState(1);
-    const [isGeneratingEpisode, setIsGeneratingEpisode] = useState(false);
-    const [episodeResult, setEpisodeResult] = useState<any>(null);
-
-    // Errors and UI
+    const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
     const [error, setError] = useState("");
     const [copiedField, setCopiedField] = useState<string | null>(null);
+
+    // Setup Form
+    const [title, setTitle] = useState("");
+    const [genre, setGenre] = useState("action");
+    const [worldRules, setWorldRules] = useState("");
+    const [aiModel, setAiModel] = useState("xiaomi/mimo-v2-flash:free");
+
+    // Character Form
+    const [editingChar, setEditingChar] = useState<Character | null>(null);
+    const [showCharForm, setShowCharForm] = useState(false);
 
     // Auth check
     useEffect(() => {
@@ -100,123 +119,119 @@ export default function SeriesPage() {
             // Load saved data
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
-                const data = JSON.parse(saved);
+                const data = JSON.parse(saved) as SeriesData;
+                setSeriesData(data);
                 if (data.seriesBible) {
-                    setSeriesBible(data.seriesBible);
-                    setCharacters(data.characters || []);
-                    setCurrentStep(1);
+                    setTitle(data.seriesBible.title);
+                    setGenre(data.seriesBible.genre || "action");
+                    setWorldRules(data.seriesBible.worldRules || "");
+                    if (data.episodes.length > 0) {
+                        setActivePanel("episodes");
+                    } else if (data.characters.length > 0) {
+                        setActivePanel("characters");
+                    }
                 }
             }
         };
         checkAuth();
     }, []);
 
-    // Save to localStorage when data changes
+    // Save to localStorage whenever data changes
     useEffect(() => {
-        if (seriesBible) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ seriesBible, characters }));
+        if (seriesData.seriesBible || seriesData.characters.length > 0 || seriesData.episodes.length > 0) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(seriesData));
         }
-    }, [seriesBible, characters]);
+    }, [seriesData]);
 
-    // Step 1: Generate concept (with streaming to avoid timeout)
-    const handleGenerateConcept = async () => {
+    // Save series setup
+    const handleSaveSetup = () => {
+        if (!title.trim()) {
+            setError("Please enter a series title");
+            return;
+        }
+        setSeriesData(prev => ({
+            ...prev,
+            seriesBible: {
+                title,
+                genre: GENRES.find(g => g.id === genre)?.name || genre,
+                worldRules,
+                themes: []
+            }
+        }));
+        setActivePanel("characters");
         setError("");
-        setIsGenerating(true);
+    };
 
-        try {
-            const response = await fetch('/api/series/generate-concept', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    genre: GENRES.find(g => g.id === genre)?.name || genre,
-                    heroGender,
-                    heroAge,
-                    teamSize,
-                    villainType: VILLAIN_TYPES.find(v => v.id === villainType)?.name || villainType,
-                    style: STYLES.find(s => s.id === style)?.name || style,
-                    customConcept,
-                    aiModel
-                })
-            });
+    // Character management
+    const handleSaveCharacter = () => {
+        if (!editingChar?.name.trim()) {
+            setError("Please enter character name");
+            return;
+        }
 
+        const charWithId = {
+            ...editingChar,
+            id: editingChar.id || `char_${Date.now()}`
+        };
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Generation failed');
-            }
+        setSeriesData(prev => ({
+            ...prev,
+            characters: editingChar.id
+                ? prev.characters.map(c => c.id === editingChar.id ? charWithId : c)
+                : [...prev.characters, charWithId]
+        }));
+        setEditingChar(null);
+        setShowCharForm(false);
+        setError("");
+    };
 
-            // Handle streaming response
-            const reader = response.body?.getReader();
-            const decoder = new TextDecoder();
-
-            if (!reader) throw new Error("No response body");
-
-            let result: any = null;
-            let allChunks = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const text = decoder.decode(value, { stream: true });
-                allChunks += text;
-                const lines = text.split('\n').filter(line => line.trim().startsWith('data:'));
-
-                for (const line of lines) {
-                    try {
-                        const jsonStr = line.replace('data:', '').trim();
-                        if (jsonStr) {
-                            const parsed = JSON.parse(jsonStr);
-                            console.log("Parsed chunk:", parsed);
-                            if (parsed.done && parsed.success) {
-                                result = parsed;
-                            } else if (parsed.error) {
-                                throw new Error(parsed.error);
-                            }
-                        }
-                    } catch (e) {
-                        // Continue reading, but log for debugging
-                        console.log("Parse error on line:", line);
-                    }
-                }
-            }
-
-            console.log("Final result:", result);
-            console.log("All chunks:", allChunks);
-
-            if (result && result.seriesBible) {
-                setSeriesBible(result.seriesBible);
-                setCharacters(result.characters || []);
-                setCurrentStep(1);
-            } else {
-                console.error("No valid seriesBible found. Result:", result);
-                throw new Error("AI response parsing failed. Check console for details.");
-            }
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsGenerating(false);
+    const handleDeleteCharacter = (id: string) => {
+        if (confirm("Delete this character?")) {
+            setSeriesData(prev => ({
+                ...prev,
+                characters: prev.characters.filter(c => c.id !== id)
+            }));
         }
     };
 
-    // Step 3: Generate episode (with streaming to avoid timeout)
+    // Generate episode
     const handleGenerateEpisode = async () => {
+        if (seriesData.characters.length === 0) {
+            setError("Please add at least one character first");
+            return;
+        }
+
         setError("");
-        setIsGeneratingEpisode(true);
+        setIsGenerating(true);
+        const nextEpisodeNumber = seriesData.episodes.length + 1;
 
         try {
             const response = await fetch('/api/series', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    seriesBible,
-                    characters,
+                    seriesBible: seriesData.seriesBible,
+                    characters: seriesData.characters.map(c => ({
+                        name: c.name,
+                        role: c.role,
+                        age: c.age,
+                        gender: c.gender,
+                        visualSpec: {
+                            hair: c.hair,
+                            eyes: c.eyes,
+                            outfit: c.outfit
+                        },
+                        personality: c.personality,
+                        powers: c.powers
+                    })),
                     episodeConfig: {
-                        episodeNumber,
-                        arcPosition: episodeNumber <= 3 ? "Introduction" : episodeNumber <= 12 ? "Rising Action" : episodeNumber <= 18 ? "Climax" : "Resolution",
+                        episodeNumber: nextEpisodeNumber,
+                        arcPosition: nextEpisodeNumber <= 3 ? "Introduction" : nextEpisodeNumber <= 12 ? "Rising Action" : nextEpisodeNumber <= 18 ? "Climax" : "Resolution",
                         requiredBeats: [],
-                        charactersAppearing: characters.map((c: any) => c.name),
-                        previousSummary: "",
+                        charactersAppearing: seriesData.characters.map(c => c.name),
+                        previousSummary: seriesData.episodes.length > 0
+                            ? seriesData.episodes[seriesData.episodes.length - 1].summary
+                            : "",
                         nextEpisodeHook: ""
                     },
                     targetPlatform: "veo",
@@ -229,60 +244,64 @@ export default function SeriesPage() {
                 throw new Error(errorData.error || 'Generation failed');
             }
 
-            // Handle streaming response
+            // Handle streaming
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
-
             if (!reader) throw new Error("No response body");
 
             let result: any = null;
-
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-
                 const text = decoder.decode(value, { stream: true });
                 const lines = text.split('\n').filter(line => line.trim().startsWith('data:'));
-
                 for (const line of lines) {
                     try {
                         const jsonStr = line.replace('data:', '').trim();
                         if (jsonStr) {
                             const parsed = JSON.parse(jsonStr);
-                            if (parsed.done && parsed.success) {
-                                result = parsed;
-                            } else if (parsed.error) {
-                                throw new Error(parsed.error);
-                            }
+                            if (parsed.done && parsed.success) result = parsed;
+                            else if (parsed.error) throw new Error(parsed.error);
                         }
-                    } catch (e) {
-                        // Continue reading
-                    }
+                    } catch (e) { /* continue */ }
                 }
             }
 
             if (result) {
-                setEpisodeResult(result);
+                const newEpisode: Episode = {
+                    episodeNumber: nextEpisodeNumber,
+                    title: result.episodeTitle || `Episode ${nextEpisodeNumber}`,
+                    summary: result.episodeSummary || "",
+                    scenes: result.scenes || [],
+                    createdAt: new Date().toISOString()
+                };
+                setSeriesData(prev => ({
+                    ...prev,
+                    episodes: [...prev.episodes, newEpisode]
+                }));
+                setSelectedEpisode(newEpisode);
             } else {
-                throw new Error("Failed to generate episode. Please try again.");
+                throw new Error("Failed to generate episode");
             }
         } catch (err: any) {
             setError(err.message);
         } finally {
-            setIsGeneratingEpisode(false);
+            setIsGenerating(false);
         }
     };
 
-    // Reset and start over
+    // Reset series
     const handleReset = () => {
-        localStorage.removeItem(STORAGE_KEY);
-        setSeriesBible(null);
-        setCharacters([]);
-        setEpisodeResult(null);
-        setCurrentStep(0);
+        if (confirm("Delete this series and start over?")) {
+            localStorage.removeItem(STORAGE_KEY);
+            setSeriesData({ seriesBible: null, characters: [], episodes: [] });
+            setTitle("");
+            setWorldRules("");
+            setActivePanel("setup");
+            setSelectedEpisode(null);
+        }
     };
 
-    // Copy helper
     const copyToClipboard = (text: string, field: string) => {
         navigator.clipboard.writeText(text);
         setCopiedField(field);
@@ -307,415 +326,456 @@ export default function SeriesPage() {
                 <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-900 rounded-full blur-[120px]" />
             </div>
 
-            <div className="max-w-4xl mx-auto px-4 sm:px-6">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6">
                 {/* Header */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
-                    <h1 className="text-3xl md:text-5xl font-black mb-3">
-                        Anime <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Series</span> Generator
-                    </h1>
-                    <p className="text-gray-400 text-sm md:text-base">
-                        Tell us your concept → AI creates everything → You generate episodes
-                    </p>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl md:text-4xl font-black">
+                                {seriesData.seriesBible?.title || "New Series"}
+                            </h1>
+                            <p className="text-gray-500 text-sm mt-1">
+                                {seriesData.characters.length} characters • {seriesData.episodes.length} episodes
+                            </p>
+                        </div>
+                        {seriesData.seriesBible && (
+                            <button onClick={handleReset} className="text-sm text-gray-500 hover:text-red-400 flex items-center gap-1">
+                                <Trash2 className="w-4 h-4" /> Reset
+                            </button>
+                        )}
+                    </div>
                 </motion.div>
 
-                {/* Step Indicator */}
-                <div className="flex items-center justify-center gap-2 mb-8">
-                    {STEPS.map((step, i) => (
-                        <div key={step} className="flex items-center gap-2">
-                            <button
-                                onClick={() => i < currentStep && setCurrentStep(i)}
-                                disabled={i > currentStep}
-                                className={cn(
-                                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
-                                    i === currentStep ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white" :
-                                        i < currentStep ? "bg-purple-500/30 text-purple-300 cursor-pointer hover:bg-purple-500/50" :
-                                            "bg-gray-800 text-gray-500"
-                                )}
-                            >
-                                {i + 1}
-                            </button>
-                            <span className={cn(
-                                "text-sm font-medium hidden sm:block",
-                                i === currentStep ? "text-white" : "text-gray-500"
-                            )}>{step}</span>
-                            {i < STEPS.length - 1 && <div className="w-8 h-0.5 bg-gray-700" />}
-                        </div>
+                {/* Navigation Tabs */}
+                <div className="flex gap-1 bg-gray-900/50 rounded-xl p-1 mb-6">
+                    {[
+                        { id: "setup", label: "Setup", icon: Settings },
+                        { id: "characters", label: "Characters", icon: Users },
+                        { id: "episodes", label: "Episodes", icon: Film }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActivePanel(tab.id as any)}
+                            className={cn(
+                                "flex-1 py-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2",
+                                activePanel === tab.id
+                                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                                    : "text-gray-500 hover:text-white"
+                            )}
+                        >
+                            <tab.icon className="w-4 h-4" />
+                            {tab.label}
+                            {tab.id === "characters" && seriesData.characters.length > 0 && (
+                                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs">{seriesData.characters.length}</span>
+                            )}
+                            {tab.id === "episodes" && seriesData.episodes.length > 0 && (
+                                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs">{seriesData.episodes.length}</span>
+                            )}
+                        </button>
                     ))}
                 </div>
 
+                {/* Error */}
+                {error && (
+                    <div className="mb-4 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                        {error}
+                    </div>
+                )}
+
                 {/* Content */}
                 <AnimatePresence mode="wait">
-                    {/* STEP 0: Concept Form */}
-                    {currentStep === 0 && (
-                        <motion.div
-                            key="concept"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="space-y-6"
-                        >
-                            {/* Genre */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-3">Genre</label>
-                                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                                    {GENRES.map(g => (
-                                        <button
-                                            key={g.id}
-                                            onClick={() => setGenre(g.id)}
-                                            className={cn(
-                                                "p-3 rounded-xl border transition-all flex flex-col items-center gap-1",
-                                                genre === g.id
-                                                    ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
-                                                    : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
-                                            )}
-                                        >
-                                            <g.icon className="w-5 h-5" />
-                                            <span className="text-xs">{g.name.split('/')[0]}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                    {/* SETUP PANEL */}
+                    {activePanel === "setup" && (
+                        <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                                <h2 className="text-lg font-bold mb-4">Series Setup</h2>
 
-                            {/* Hero */}
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-2">Hero Gender</label>
-                                    <div className="flex gap-2">
-                                        {["male", "female"].map(g => (
-                                            <button
-                                                key={g}
-                                                onClick={() => setHeroGender(g)}
-                                                className={cn(
-                                                    "flex-1 py-3 rounded-xl border text-sm font-medium transition-all",
-                                                    heroGender === g
-                                                        ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
-                                                        : "bg-white/5 border-white/10 text-gray-400"
-                                                )}
-                                            >
-                                                {g.charAt(0).toUpperCase() + g.slice(1)}
-                                            </button>
-                                        ))}
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-2">Series Title *</label>
+                                        <input
+                                            type="text"
+                                            value={title}
+                                            onChange={(e) => setTitle(e.target.value)}
+                                            placeholder="e.g., Shadow Hunters: The Last Light"
+                                            className="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-white"
+                                        />
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-2">Hero Age</label>
-                                    <div className="flex gap-2">
-                                        {HERO_AGES.map(a => (
-                                            <button
-                                                key={a}
-                                                onClick={() => setHeroAge(a)}
-                                                className={cn(
-                                                    "flex-1 py-3 rounded-xl border text-xs font-medium transition-all capitalize",
-                                                    heroAge === a
-                                                        ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
-                                                        : "bg-white/5 border-white/10 text-gray-400"
-                                                )}
-                                            >
-                                                {a}
-                                            </button>
-                                        ))}
+
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-2">Genre</label>
+                                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                                            {GENRES.map(g => (
+                                                <button
+                                                    key={g.id}
+                                                    onClick={() => setGenre(g.id)}
+                                                    className={cn(
+                                                        "p-3 rounded-xl border transition-all flex flex-col items-center gap-1",
+                                                        genre === g.id
+                                                            ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
+                                                            : "bg-white/5 border-white/10 text-gray-400"
+                                                    )}
+                                                >
+                                                    <g.icon className="w-5 h-5" />
+                                                    <span className="text-xs">{g.name.split('/')[0]}</span>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
 
-                            {/* Team Size */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Team Size</label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {TEAM_SIZES.map(t => (
-                                        <button
-                                            key={t.id}
-                                            onClick={() => setTeamSize(t.id)}
-                                            className={cn(
-                                                "p-3 rounded-xl border transition-all text-left",
-                                                teamSize === t.id
-                                                    ? "bg-purple-500/20 border-purple-500/50"
-                                                    : "bg-white/5 border-white/10"
-                                            )}
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-2">World Rules (Optional)</label>
+                                        <textarea
+                                            value={worldRules}
+                                            onChange={(e) => setWorldRules(e.target.value)}
+                                            placeholder="e.g., Magic exists but is forbidden. Society is divided into guilds..."
+                                            className="w-full h-24 bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-white resize-none"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-2">AI Model</label>
+                                        <select
+                                            value={aiModel}
+                                            onChange={(e) => setAiModel(e.target.value)}
+                                            className="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-white [&>option]:bg-gray-900"
                                         >
-                                            <div className={cn("text-sm font-medium", teamSize === t.id ? "text-purple-300" : "text-gray-300")}>{t.name}</div>
-                                            <div className="text-xs text-gray-500">{t.desc}</div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                                            {INTELLIGENCE_MODELS.map(m => (
+                                                <option key={m.id} value={m.id}>{m.name} - {m.desc}</option>
+                                            ))}
+                                        </select>
+                                    </div>
 
-                            {/* Villain */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Villain Type</label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {VILLAIN_TYPES.map(v => (
-                                        <button
-                                            key={v.id}
-                                            onClick={() => setVillainType(v.id)}
-                                            className={cn(
-                                                "p-3 rounded-xl border transition-all text-left",
-                                                villainType === v.id
-                                                    ? "bg-purple-500/20 border-purple-500/50"
-                                                    : "bg-white/5 border-white/10"
-                                            )}
-                                        >
-                                            <div className={cn("text-sm font-medium", villainType === v.id ? "text-purple-300" : "text-gray-300")}>{v.name}</div>
-                                            <div className="text-xs text-gray-500">{v.desc}</div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Style */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Tone/Style</label>
-                                <div className="flex gap-2">
-                                    {STYLES.map(s => (
-                                        <button
-                                            key={s.id}
-                                            onClick={() => setStyle(s.id)}
-                                            className={cn(
-                                                "flex-1 py-3 rounded-xl border text-sm font-medium transition-all",
-                                                style === s.id
-                                                    ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
-                                                    : "bg-white/5 border-white/10 text-gray-400"
-                                            )}
-                                        >
-                                            {s.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* AI Model Selector */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">AI Model</label>
-                                <select
-                                    value={aiModel}
-                                    onChange={(e) => setAiModel(e.target.value)}
-                                    className="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-white [&>option]:bg-gray-900 [&>option]:text-white"
-                                >
-                                    {INTELLIGENCE_MODELS.map(m => (
-                                        <option key={m.id} value={m.id}>
-                                            {m.name} - {m.desc}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Custom Concept */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Custom Concept (Optional)</label>
-                                <textarea
-                                    value={customConcept}
-                                    onChange={(e) => setCustomConcept(e.target.value)}
-                                    placeholder="Add any specific ideas: 'The hero has fire powers', 'Set in ancient Japan', 'The villain is the hero's brother'..."
-                                    className="w-full h-20 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white resize-none text-sm"
-                                />
-                            </div>
-
-                            {/* Error */}
-                            {error && (
-                                <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                                    {error}
-                                </div>
-                            )}
-
-                            {/* Generate Button */}
-                            <button
-                                onClick={handleGenerateConcept}
-                                disabled={isGenerating}
-                                className={cn(
-                                    "w-full py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3",
-                                    isGenerating
-                                        ? "bg-gray-700 text-gray-400 cursor-wait"
-                                        : "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 shadow-lg shadow-purple-500/20"
-                                )}
-                            >
-                                {isGenerating ? (
-                                    <><RefreshCw className="w-5 h-5 animate-spin" /> AI is creating your series...</>
-                                ) : (
-                                    <><Wand2 className="w-5 h-5" /> Generate Series with AI</>
-                                )}
-                            </button>
-                        </motion.div>
-                    )}
-
-                    {/* STEP 1: AI Review */}
-                    {currentStep === 1 && seriesBible && (
-                        <motion.div
-                            key="review"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="space-y-6"
-                        >
-                            {/* Series Bible Card */}
-                            <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-5">
-                                <div className="flex items-center justify-between mb-4">
-                                    <span className="text-xs font-bold text-purple-400 uppercase">Series Bible</span>
-                                    <button onClick={handleReset} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1">
-                                        <Trash2 className="w-3 h-3" /> Start Over
+                                    <button
+                                        onClick={handleSaveSetup}
+                                        className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                                    >
+                                        Continue to Characters <ArrowRight className="w-4 h-4 inline ml-2" />
                                     </button>
                                 </div>
-                                <h2 className="text-2xl font-black text-white mb-2">{seriesBible.title}</h2>
-                                <p className="text-gray-400 text-sm mb-4">{seriesBible.worldRules}</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {seriesBible.themes?.map((t: string, i: number) => (
-                                        <span key={i} className="px-2 py-1 bg-purple-500/20 rounded-full text-xs text-purple-300">{t}</span>
-                                    ))}
-                                </div>
                             </div>
-
-                            {/* Characters */}
-                            <div>
-                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                                    <Users className="w-5 h-5 text-purple-400" /> Characters ({characters.length})
-                                </h3>
-                                <div className="space-y-3">
-                                    {characters.map((char: any, i: number) => (
-                                        <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-4">
-                                            <div className="flex items-start justify-between mb-2">
-                                                <div>
-                                                    <span className={cn(
-                                                        "text-xs font-bold uppercase px-2 py-0.5 rounded",
-                                                        char.role === 'hero' ? "bg-green-500/20 text-green-400" :
-                                                            char.role === 'villain' ? "bg-red-500/20 text-red-400" :
-                                                                "bg-blue-500/20 text-blue-400"
-                                                    )}>
-                                                        {char.role}
-                                                    </span>
-                                                    <h4 className="text-lg font-bold text-white mt-1">{char.name}</h4>
-                                                </div>
-                                                <span className="text-xs text-gray-500">{char.age} years old</span>
-                                            </div>
-                                            <div className="text-sm text-gray-400 space-y-1">
-                                                <p><span className="text-gray-500">Look:</span> {char.visualSpec?.hair}, {char.visualSpec?.eyes}</p>
-                                                <p><span className="text-gray-500">Outfit:</span> {char.visualSpec?.outfit}</p>
-                                                <p><span className="text-gray-500">Personality:</span> {char.personality}</p>
-                                                {char.powers && <p><span className="text-gray-500">Powers:</span> {char.powers}</p>}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Arc Overview */}
-                            {seriesBible.arcOverview && (
-                                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                                    <h4 className="text-sm font-bold text-gray-400 mb-2">24-Episode Arc Overview</h4>
-                                    <p className="text-sm text-gray-300">{seriesBible.arcOverview}</p>
-                                </div>
-                            )}
-
-                            {/* Continue Button */}
-                            <button
-                                onClick={() => setCurrentStep(2)}
-                                className="w-full py-4 rounded-2xl font-bold text-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 flex items-center justify-center gap-3"
-                            >
-                                Continue to Episode Generation <ArrowRight className="w-5 h-5" />
-                            </button>
                         </motion.div>
                     )}
 
-                    {/* STEP 2: Generate Episodes */}
-                    {currentStep === 2 && (
-                        <motion.div
-                            key="generate"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="space-y-6"
-                        >
-                            <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between">
-                                <div>
-                                    <h3 className="text-lg font-bold">{seriesBible?.title}</h3>
-                                    <p className="text-sm text-gray-500">{characters.length} characters ready</p>
-                                </div>
-                                <button onClick={() => setCurrentStep(1)} className="text-sm text-purple-400 hover:text-purple-300">
-                                    Edit Setup
+                    {/* CHARACTERS PANEL */}
+                    {activePanel === "characters" && (
+                        <motion.div key="characters" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+                            {/* Character List */}
+                            <div className="grid md:grid-cols-2 gap-4">
+                                {seriesData.characters.map(char => (
+                                    <div key={char.id} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div>
+                                                <span className={cn(
+                                                    "text-xs font-bold uppercase px-2 py-0.5 rounded",
+                                                    char.role === 'hero' ? "bg-green-500/20 text-green-400" :
+                                                        char.role === 'villain' ? "bg-red-500/20 text-red-400" :
+                                                            "bg-blue-500/20 text-blue-400"
+                                                )}>{char.role}</span>
+                                                <h3 className="text-lg font-bold mt-1">{char.name}</h3>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => { setEditingChar(char); setShowCharForm(true); }} className="text-gray-500 hover:text-white">
+                                                    <Edit3 className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => handleDeleteCharacter(char.id)} className="text-gray-500 hover:text-red-400">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-gray-400">{char.gender}, {char.age}yo • {char.hair}</p>
+                                        <p className="text-sm text-gray-500 mt-1">{char.personality}</p>
+                                    </div>
+                                ))}
+
+                                {/* Add Character Button */}
+                                <button
+                                    onClick={() => { setEditingChar({ ...DEFAULT_CHARACTER }); setShowCharForm(true); }}
+                                    className="bg-white/5 border border-dashed border-white/20 rounded-xl p-8 flex flex-col items-center justify-center gap-2 hover:bg-white/10 transition-all"
+                                >
+                                    <Plus className="w-8 h-8 text-purple-400" />
+                                    <span className="text-gray-400">Add Character</span>
                                 </button>
                             </div>
 
-                            {/* Episode Selector */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Select Episode</label>
-                                <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
-                                    {Array.from({ length: 24 }, (_, i) => i + 1).map(ep => (
-                                        <button
-                                            key={ep}
-                                            onClick={() => setEpisodeNumber(ep)}
-                                            className={cn(
-                                                "py-2 rounded-lg text-sm font-bold transition-all",
-                                                episodeNumber === ep
-                                                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                                                    : "bg-white/5 text-gray-500 hover:text-white"
-                                            )}
-                                        >
-                                            {ep}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Error */}
-                            {error && (
-                                <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                                    {error}
-                                </div>
+                            {/* Continue Button */}
+                            {seriesData.characters.length > 0 && (
+                                <button
+                                    onClick={() => setActivePanel("episodes")}
+                                    className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                                >
+                                    Continue to Episodes <ArrowRight className="w-4 h-4 inline ml-2" />
+                                </button>
                             )}
 
-                            {/* Generate Button */}
-                            <button
-                                onClick={handleGenerateEpisode}
-                                disabled={isGeneratingEpisode}
-                                className={cn(
-                                    "w-full py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3",
-                                    isGeneratingEpisode
-                                        ? "bg-gray-700 text-gray-400 cursor-wait"
-                                        : "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90"
-                                )}
-                            >
-                                {isGeneratingEpisode ? (
-                                    <><RefreshCw className="w-5 h-5 animate-spin" /> Generating Episode {episodeNumber}...</>
-                                ) : (
-                                    <><Film className="w-5 h-5" /> Generate Episode {episodeNumber} Prompts</>
-                                )}
-                            </button>
+                            {/* Character Form Modal */}
+                            <AnimatePresence>
+                                {showCharForm && editingChar && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                                        onClick={() => setShowCharForm(false)}
+                                    >
+                                        <motion.div
+                                            initial={{ scale: 0.9 }}
+                                            animate={{ scale: 1 }}
+                                            exit={{ scale: 0.9 }}
+                                            className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto"
+                                            onClick={e => e.stopPropagation()}
+                                        >
+                                            <h3 className="text-xl font-bold mb-4">{editingChar.id ? "Edit" : "Add"} Character</h3>
 
-                            {/* Results */}
-                            {episodeResult && (
-                                <div className="space-y-4 mt-6">
-                                    <div className="bg-gradient-to-r from-green-500/10 to-teal-500/10 border border-green-500/20 rounded-2xl p-5">
-                                        <span className="text-xs font-bold text-green-400">EPISODE {episodeNumber}</span>
-                                        <h3 className="text-xl font-bold text-white">{episodeResult.episodeTitle}</h3>
-                                        <p className="text-gray-400 text-sm mt-2">{episodeResult.episodeSummary}</p>
-                                    </div>
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm text-gray-400 mb-1">Name *</label>
+                                                        <input
+                                                            type="text"
+                                                            value={editingChar.name}
+                                                            onChange={e => setEditingChar({ ...editingChar, name: e.target.value })}
+                                                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm text-gray-400 mb-1">Role</label>
+                                                        <select
+                                                            value={editingChar.role}
+                                                            onChange={e => setEditingChar({ ...editingChar, role: e.target.value as any })}
+                                                            className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 [&>option]:bg-gray-800"
+                                                        >
+                                                            <option value="hero">Hero</option>
+                                                            <option value="friend">Friend/Ally</option>
+                                                            <option value="villain">Villain</option>
+                                                            <option value="other">Other</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
 
-                                    {episodeResult.scenes?.map((scene: any, si: number) => (
-                                        <div key={si} className="bg-white/5 border border-white/10 rounded-xl p-4">
-                                            <h4 className="text-sm font-bold text-gray-400 mb-3">
-                                                SCENE {scene.sceneNumber}: {scene.sceneType}
-                                            </h4>
-                                            <div className="space-y-3">
-                                                {scene.clips?.map((clip: any, ci: number) => (
-                                                    <div key={ci} className="bg-black/30 rounded-lg p-3 border border-white/5">
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <span className="text-xs text-purple-400 font-bold">CLIP {clip.clipNumber}</span>
-                                                            <button
-                                                                onClick={() => copyToClipboard(
-                                                                    `[SHOT]: ${clip.shotType}\n[CAMERA]: ${clip.camera}\n[SUBJECT]: ${clip.character}\n[ACTION]: ${clip.action}\n[CONTEXT]: ${clip.context}\n[STYLE]: ${clip.style}\n(no subtitles)`,
-                                                                    `clip-${si}-${ci}`
-                                                                )}
-                                                                className="px-2 py-1 rounded bg-purple-500/20 text-purple-300 text-xs"
-                                                            >
-                                                                {copiedField === `clip-${si}-${ci}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                                            </button>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm text-gray-400 mb-1">Gender</label>
+                                                        <select
+                                                            value={editingChar.gender}
+                                                            onChange={e => setEditingChar({ ...editingChar, gender: e.target.value })}
+                                                            className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 [&>option]:bg-gray-800"
+                                                        >
+                                                            <option value="male">Male</option>
+                                                            <option value="female">Female</option>
+                                                            <option value="other">Other</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm text-gray-400 mb-1">Age</label>
+                                                        <input
+                                                            type="number"
+                                                            value={editingChar.age}
+                                                            onChange={e => setEditingChar({ ...editingChar, age: parseInt(e.target.value) || 17 })}
+                                                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm text-gray-400 mb-1">Hair</label>
+                                                    <input
+                                                        type="text"
+                                                        value={editingChar.hair}
+                                                        onChange={e => setEditingChar({ ...editingChar, hair: e.target.value })}
+                                                        placeholder="e.g., Black, spiky, shoulder-length"
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm text-gray-400 mb-1">Eyes</label>
+                                                    <input
+                                                        type="text"
+                                                        value={editingChar.eyes}
+                                                        onChange={e => setEditingChar({ ...editingChar, eyes: e.target.value })}
+                                                        placeholder="e.g., Brown, determined expression"
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm text-gray-400 mb-1">Outfit</label>
+                                                    <input
+                                                        type="text"
+                                                        value={editingChar.outfit}
+                                                        onChange={e => setEditingChar({ ...editingChar, outfit: e.target.value })}
+                                                        placeholder="e.g., Black cloak, leather armor"
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm text-gray-400 mb-1">Personality</label>
+                                                    <textarea
+                                                        value={editingChar.personality}
+                                                        onChange={e => setEditingChar({ ...editingChar, personality: e.target.value })}
+                                                        placeholder="e.g., Brave, loyal, protective of friends"
+                                                        className="w-full h-16 bg-white/5 border border-white/10 rounded-lg px-3 py-2 resize-none"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm text-gray-400 mb-1">Powers/Abilities</label>
+                                                    <input
+                                                        type="text"
+                                                        value={editingChar.powers}
+                                                        onChange={e => setEditingChar({ ...editingChar, powers: e.target.value })}
+                                                        placeholder="e.g., Fire manipulation, super speed"
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                                                    />
+                                                </div>
+
+                                                <div className="flex gap-3 pt-2">
+                                                    <button
+                                                        onClick={() => setShowCharForm(false)}
+                                                        className="flex-1 py-2 rounded-lg border border-white/10 text-gray-400"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        onClick={handleSaveCharacter}
+                                                        className="flex-1 py-2 rounded-lg bg-purple-500 text-white font-bold"
+                                                    >
+                                                        Save Character
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                    )}
+
+                    {/* EPISODES PANEL */}
+                    {activePanel === "episodes" && (
+                        <motion.div key="episodes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            <div className="grid md:grid-cols-3 gap-6">
+                                {/* Episode Timeline */}
+                                <div className="md:col-span-1 space-y-2">
+                                    <h3 className="text-sm font-bold text-gray-400 mb-3">EPISODE TIMELINE</h3>
+
+                                    {seriesData.episodes.map(ep => (
+                                        <button
+                                            key={ep.episodeNumber}
+                                            onClick={() => setSelectedEpisode(ep)}
+                                            className={cn(
+                                                "w-full p-3 rounded-xl border text-left transition-all flex items-center gap-3",
+                                                selectedEpisode?.episodeNumber === ep.episodeNumber
+                                                    ? "bg-purple-500/20 border-purple-500/50"
+                                                    : "bg-white/5 border-white/10 hover:bg-white/10"
+                                            )}
+                                        >
+                                            <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                                            <div className="min-w-0">
+                                                <div className="text-sm font-bold">Episode {ep.episodeNumber}</div>
+                                                <div className="text-xs text-gray-500 truncate">{ep.title}</div>
+                                            </div>
+                                        </button>
+                                    ))}
+
+                                    {/* Generate Next Episode */}
+                                    <button
+                                        onClick={handleGenerateEpisode}
+                                        disabled={isGenerating || seriesData.characters.length === 0}
+                                        className={cn(
+                                            "w-full p-3 rounded-xl border text-left transition-all flex items-center gap-3",
+                                            isGenerating
+                                                ? "bg-purple-500/10 border-purple-500/30 animate-pulse"
+                                                : "bg-white/5 border-dashed border-white/20 hover:bg-white/10"
+                                        )}
+                                    >
+                                        {isGenerating ? (
+                                            <>
+                                                <RefreshCw className="w-5 h-5 text-purple-400 animate-spin flex-shrink-0" />
+                                                <div>
+                                                    <div className="text-sm font-bold text-purple-300">Generating...</div>
+                                                    <div className="text-xs text-gray-500">Episode {seriesData.episodes.length + 1}</div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Plus className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                                                <div>
+                                                    <div className="text-sm font-bold">Generate Episode {seriesData.episodes.length + 1}</div>
+                                                    <div className="text-xs text-gray-500">Click to create</div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </button>
+
+                                    {seriesData.characters.length === 0 && (
+                                        <p className="text-xs text-yellow-400 mt-2">⚠️ Add characters first</p>
+                                    )}
+                                </div>
+
+                                {/* Episode Viewer */}
+                                <div className="md:col-span-2">
+                                    {selectedEpisode ? (
+                                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div>
+                                                    <span className="text-xs font-bold text-purple-400">EPISODE {selectedEpisode.episodeNumber}</span>
+                                                    <h2 className="text-xl font-bold">{selectedEpisode.title}</h2>
+                                                </div>
+                                                <span className="text-xs text-gray-500">
+                                                    {new Date(selectedEpisode.createdAt).toLocaleDateString()}
+                                                </span>
+                                            </div>
+
+                                            {selectedEpisode.summary && (
+                                                <p className="text-gray-400 text-sm mb-6">{selectedEpisode.summary}</p>
+                                            )}
+
+                                            {/* Scenes */}
+                                            <div className="space-y-4">
+                                                {selectedEpisode.scenes?.map((scene: any, si: number) => (
+                                                    <div key={si} className="bg-black/30 rounded-xl p-4">
+                                                        <h4 className="text-sm font-bold text-gray-300 mb-3">
+                                                            SCENE {scene.sceneNumber || si + 1}: {scene.sceneType || "Action"}
+                                                        </h4>
+                                                        <div className="space-y-2">
+                                                            {scene.clips?.map((clip: any, ci: number) => (
+                                                                <div key={ci} className="bg-gray-900/50 rounded-lg p-3 border border-white/5">
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <span className="text-xs text-purple-400 font-bold">CLIP {clip.clipNumber || ci + 1}</span>
+                                                                        <button
+                                                                            onClick={() => copyToClipboard(
+                                                                                `[SHOT]: ${clip.shotType || "Medium"}\n[CAMERA]: ${clip.camera || "Static"}\n[SUBJECT]: ${clip.character || "Character"}\n[ACTION]: ${clip.action || ""}\n[STYLE]: ${clip.style || "Anime"}\n(no subtitles)`,
+                                                                                `clip-${si}-${ci}`
+                                                                            )}
+                                                                            className="px-2 py-1 rounded bg-purple-500/20 text-purple-300 text-xs hover:bg-purple-500/30"
+                                                                        >
+                                                                            {copiedField === `clip-${si}-${ci}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                                                        </button>
+                                                                    </div>
+                                                                    <p className="text-sm text-gray-300">{clip.action}</p>
+                                                                </div>
+                                                            ))}
                                                         </div>
-                                                        <p className="text-sm text-gray-300">{clip.action}</p>
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
-                                    ))}
+                                    ) : (
+                                        <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center">
+                                            <MessageSquare className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                                            <h3 className="text-lg font-bold text-gray-400 mb-2">No Episode Selected</h3>
+                                            <p className="text-sm text-gray-500">
+                                                {seriesData.episodes.length > 0
+                                                    ? "Click an episode from the timeline to view"
+                                                    : "Generate your first episode to get started"}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
