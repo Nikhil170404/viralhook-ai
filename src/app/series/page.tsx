@@ -5,7 +5,8 @@ import { createBrowserClient } from "@supabase/ssr";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Plus, Trash2, Copy, Check, Sparkles, Zap, ChevronDown, ChevronRight,
-    Film, User, BookOpen, Play, Brain, Cpu, Target, RefreshCw, Save
+    Film, User, BookOpen, Play, Brain, Cpu, RefreshCw, Wand2, Edit3,
+    Users, Swords, Skull, Heart, Laugh, Moon, Settings, ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/ui/navbar";
@@ -16,206 +17,79 @@ const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Step indicators
+const STEPS = ["Concept", "AI Review", "Generate"];
+
+// Genre options
+const GENRES = [
+    { id: "action", name: "Action/Adventure", icon: Swords },
+    { id: "fantasy", name: "Fantasy", icon: Wand2 },
+    { id: "scifi", name: "Sci-Fi", icon: Cpu },
+    { id: "romance", name: "Romance", icon: Heart },
+    { id: "horror", name: "Horror", icon: Skull },
+    { id: "comedy", name: "Comedy", icon: Laugh },
+];
+
+const HERO_AGES = ["teenager", "young adult", "adult"];
+const TEAM_SIZES = [
+    { id: "solo", name: "Solo Hero", desc: "Just the protagonist" },
+    { id: "2", name: "Small Team", desc: "Hero + 2 allies" },
+    { id: "4", name: "Full Squad", desc: "Hero + 4 allies" },
+];
+const VILLAIN_TYPES = [
+    { id: "single", name: "Single Enemy", desc: "One powerful antagonist" },
+    { id: "organization", name: "Evil Organization", desc: "Shadowy group with hierarchy" },
+    { id: "monster", name: "Monster/Demon", desc: "Non-human threat" },
+];
+const STYLES = [
+    { id: "dark", name: "Dark & Serious" },
+    { id: "balanced", name: "Balanced" },
+    { id: "light", name: "Light & Fun" },
+];
+
 // Intelligence Models (same as main generator)
-const AI_MODELS = [
-    { id: "deepseek/deepseek-r1-0528:free", name: "Deepseek R1 (Thinking)", icon: Sparkles, desc: "Full reasoning visible" },
-    { id: "deepseek/deepseek-r1-0528:free-fast", name: "Deepseek R1 (No Thinking)", icon: Zap, desc: "Faster results" },
-    { id: "tngtech/deepseek-r1t2-chimera:free", name: "R1T2 Chimera (Thinking)", icon: Brain, desc: "Hybrid reasoning" },
-    { id: "tngtech/deepseek-r1t2-chimera:free-fast", name: "R1T2 Chimera (No Thinking)", icon: Cpu, desc: "Hybrid fast" },
+const INTELLIGENCE_MODELS = [
+    { id: "xiaomi/mimo-v2-flash:free", name: "Xiaomi MIMO v2 (Instant)", desc: "Fastest generation" },
+    { id: "deepseek/deepseek-r1-0528:free", name: "Deepseek R1 (Thinking)", desc: "Best quality with reasoning" },
+    { id: "tngtech/deepseek-r1t2-chimera:free", name: "R1T2 Chimera (Thinking)", desc: "Hybrid reasoning" },
+    { id: "tngtech/deepseek-r1t-chimera:free", name: "R1T Chimera (Thinking)", desc: "Balanced reasoning" },
 ];
 
-const TARGET_PLATFORMS = [
-    { id: "veo", name: "Google Veo", color: "from-green-500 to-teal-500" },
-    { id: "kling", name: "Kling AI", color: "from-blue-500 to-cyan-500" },
-    { id: "runway", name: "Runway", color: "from-purple-500 to-pink-500" },
-    { id: "luma", name: "Luma", color: "from-orange-500 to-red-500" },
-];
-
-const TABS = ["Series Bible", "Characters", "Generate Episode"];
-
-// Default empty states
-const DEFAULT_CHARACTER = {
-    id: "",
-    name: "",
-    visualSpec: {
-        age: 17,
-        height: "170cm, athletic build",
-        build: "athletic",
-        hair: "",
-        eyes: "",
-        face: "",
-        outfit: "",
-        accessories: ""
-    },
-    voiceSpec: {
-        tone: "",
-        speechPattern: "",
-        verbalTics: []
-    },
-    personality: "",
-    backstory: ""
-};
-
-const DEFAULT_SERIES: {
-    title: string;
-    genre: string;
-    themes: string[];
-    worldRules: string;
-    toneGuide: string;
-    totalEpisodes: number;
-    arcStructure: string;
-} = {
-    title: "",
-    genre: "Action/Adventure",
-    themes: [],
-    worldRules: "",
-    toneGuide: "",
-    totalEpisodes: 24,
-    arcStructure: ""
-};
+// Storage keys
+const STORAGE_KEY = "viralhook_series_data";
 
 export default function SeriesPage() {
     const [session, setSession] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState(0);
+    const [currentStep, setCurrentStep] = useState(0);
 
-    // Project Management
-    const [projects, setProjects] = useState<{ id: string; name: string; updatedAt: number }[]>([]);
-    const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
-    const [showProjectMenu, setShowProjectMenu] = useState(false);
+    // Step 1: Concept Form
+    const [genre, setGenre] = useState("action");
+    const [heroGender, setHeroGender] = useState("male");
+    const [heroAge, setHeroAge] = useState("teenager");
+    const [teamSize, setTeamSize] = useState("2");
+    const [villainType, setVillainType] = useState("organization");
+    const [style, setStyle] = useState("balanced");
+    const [customConcept, setCustomConcept] = useState("");
+    const [aiModel, setAiModel] = useState("xiaomi/mimo-v2-flash:free");
 
-    // Series Bible State
-    const [seriesBible, setSeriesBible] = useState(DEFAULT_SERIES);
-    const [themeInput, setThemeInput] = useState("");
 
-    // Characters State
-    const [characters, setCharacters] = useState<typeof DEFAULT_CHARACTER[]>([]);
-    const [editingChar, setEditingChar] = useState<number | null>(null);
-
-    // Episode Generator State
-    const [episodeNumber, setEpisodeNumber] = useState(1);
-    const [arcPosition, setArcPosition] = useState("Introduction");
-    const [requiredBeats, setRequiredBeats] = useState("");
-    const [previousSummary, setPreviousSummary] = useState("");
-    const [nextHook, setNextHook] = useState("");
-    const [selectedChars, setSelectedChars] = useState<string[]>([]);
-    const [targetPlatform, setTargetPlatform] = useState("veo");
-    const [aiModel, setAiModel] = useState("deepseek/deepseek-r1-0528:free");
-
-    // Results
+    // Step 2: AI-Generated Data
     const [isGenerating, setIsGenerating] = useState(false);
-    const [result, setResult] = useState<any>(null);
+    const [seriesBible, setSeriesBible] = useState<any>(null);
+    const [characters, setCharacters] = useState<any[]>([]);
+    const [editingField, setEditingField] = useState<string | null>(null);
+
+    // Step 3: Episode Generation
+    const [episodeNumber, setEpisodeNumber] = useState(1);
+    const [isGeneratingEpisode, setIsGeneratingEpisode] = useState(false);
+    const [episodeResult, setEpisodeResult] = useState<any>(null);
+
+    // Errors and UI
     const [error, setError] = useState("");
     const [copiedField, setCopiedField] = useState<string | null>(null);
 
-    // LocalStorage Keys
-    const STORAGE_KEY = "viralhook_series_projects";
-    const PROJECT_PREFIX = "viralhook_series_";
-
-    // Load projects list on mount
-    useEffect(() => {
-        const savedProjects = localStorage.getItem(STORAGE_KEY);
-        if (savedProjects) {
-            const parsed = JSON.parse(savedProjects);
-            setProjects(parsed);
-            // Auto-load most recent project
-            if (parsed.length > 0) {
-                const mostRecent = parsed.sort((a: any, b: any) => b.updatedAt - a.updatedAt)[0];
-                loadProject(mostRecent.id);
-            }
-        }
-    }, []);
-
-    // Auto-save current project on changes
-    useEffect(() => {
-        if (currentProjectId && seriesBible.title) {
-            const timeoutId = setTimeout(() => {
-                saveCurrentProject();
-            }, 1000); // Debounce 1 second
-            return () => clearTimeout(timeoutId);
-        }
-    }, [seriesBible, characters, episodeNumber, currentProjectId]);
-
-    // Save current project to localStorage
-    const saveCurrentProject = () => {
-        if (!currentProjectId) return;
-
-        const projectData = {
-            seriesBible,
-            characters,
-            episodeNumber,
-            arcPosition,
-            previousSummary,
-            targetPlatform
-        };
-        localStorage.setItem(PROJECT_PREFIX + currentProjectId, JSON.stringify(projectData));
-
-        // Update project list with new timestamp
-        const updatedProjects = projects.map(p =>
-            p.id === currentProjectId
-                ? { ...p, name: seriesBible.title || "Untitled", updatedAt: Date.now() }
-                : p
-        );
-        setProjects(updatedProjects);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedProjects));
-    };
-
-    // Load a project
-    const loadProject = (projectId: string) => {
-        const saved = localStorage.getItem(PROJECT_PREFIX + projectId);
-        if (saved) {
-            const data = JSON.parse(saved);
-            setSeriesBible(data.seriesBible || DEFAULT_SERIES);
-            setCharacters(data.characters || []);
-            setEpisodeNumber(data.episodeNumber || 1);
-            setArcPosition(data.arcPosition || "Introduction");
-            setPreviousSummary(data.previousSummary || "");
-            setTargetPlatform(data.targetPlatform || "veo");
-            setCurrentProjectId(projectId);
-            setSelectedChars([]);
-            setResult(null);
-        }
-        setShowProjectMenu(false);
-    };
-
-    // Create new project
-    const createNewProject = () => {
-        const newId = `project_${Date.now()}`;
-        const newProject = { id: newId, name: "New Series", updatedAt: Date.now() };
-        const updated = [newProject, ...projects];
-        setProjects(updated);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-
-        // Reset state
-        setSeriesBible({ ...DEFAULT_SERIES });
-        setCharacters([]);
-        setEpisodeNumber(1);
-        setArcPosition("Introduction");
-        setPreviousSummary("");
-        setSelectedChars([]);
-        setResult(null);
-        setCurrentProjectId(newId);
-        setActiveTab(0);
-        setShowProjectMenu(false);
-    };
-
-    // Delete a project
-    const deleteProject = (projectId: string) => {
-        localStorage.removeItem(PROJECT_PREFIX + projectId);
-        const updated = projects.filter(p => p.id !== projectId);
-        setProjects(updated);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-
-        if (currentProjectId === projectId) {
-            if (updated.length > 0) {
-                loadProject(updated[0].id);
-            } else {
-                createNewProject();
-            }
-        }
-    };
-
-    // Auth
+    // Auth check
     useEffect(() => {
         const checkAuth = async () => {
             const { data: { session: s } } = await supabase.auth.getSession();
@@ -223,74 +97,101 @@ export default function SeriesPage() {
             setSession(s);
             setIsLoading(false);
 
-            // If no projects exist, create one
-            const savedProjects = localStorage.getItem(STORAGE_KEY);
-            if (!savedProjects || JSON.parse(savedProjects).length === 0) {
-                createNewProject();
+            // Load saved data
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const data = JSON.parse(saved);
+                if (data.seriesBible) {
+                    setSeriesBible(data.seriesBible);
+                    setCharacters(data.characters || []);
+                    setCurrentStep(1);
+                }
             }
         };
         checkAuth();
     }, []);
 
-    // Add character
-    const addCharacter = () => {
-        const newChar = { ...DEFAULT_CHARACTER, id: `char_${Date.now()}` };
-        setCharacters([...characters, newChar]);
-        setEditingChar(characters.length);
-    };
-
-    // Update character
-    const updateCharacter = (index: number, field: string, value: any) => {
-        const updated = [...characters];
-        if (field.includes('.')) {
-            const [parent, child] = field.split('.');
-            (updated[index] as any)[parent][child] = value;
-        } else {
-            (updated[index] as any)[field] = value;
+    // Save to localStorage when data changes
+    useEffect(() => {
+        if (seriesBible) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ seriesBible, characters }));
         }
-        setCharacters(updated);
-    };
+    }, [seriesBible, characters]);
 
-    // Add theme
-    const addTheme = () => {
-        if (themeInput.trim()) {
-            setSeriesBible({ ...seriesBible, themes: [...seriesBible.themes, themeInput.trim()] });
-            setThemeInput("");
-        }
-    };
-
-    // Generate Episode
-    const handleGenerate = async () => {
-        if (!seriesBible.title) { setError("Please fill in the Series Bible first"); return; }
-        if (characters.length === 0) { setError("Please add at least one character"); return; }
-
+    // Step 1: Generate concept (with streaming to avoid timeout)
+    const handleGenerateConcept = async () => {
         setError("");
         setIsGenerating(true);
-        setResult(null);
 
         try {
-            const response = await fetchWithCSRF('/api/series', {
+            const response = await fetch('/api/series/generate-concept', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    seriesBible,
-                    characters: characters.filter(c => selectedChars.includes(c.id)),
-                    episodeConfig: {
-                        episodeNumber,
-                        arcPosition,
-                        requiredBeats: requiredBeats.split(',').map(s => s.trim()).filter(Boolean),
-                        charactersAppearing: selectedChars,
-                        previousSummary,
-                        nextEpisodeHook: nextHook
-                    },
-                    targetPlatform,
+                    genre: GENRES.find(g => g.id === genre)?.name || genre,
+                    heroGender,
+                    heroAge,
+                    teamSize,
+                    villainType: VILLAIN_TYPES.find(v => v.id === villainType)?.name || villainType,
+                    style: STYLES.find(s => s.id === style)?.name || style,
+                    customConcept,
                     aiModel
                 })
             });
 
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Generation failed');
-            setResult(data);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Generation failed');
+            }
+
+            // Handle streaming response
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+
+            if (!reader) throw new Error("No response body");
+
+            let result: any = null;
+            let allChunks = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const text = decoder.decode(value, { stream: true });
+                allChunks += text;
+                const lines = text.split('\n').filter(line => line.trim().startsWith('data:'));
+
+                for (const line of lines) {
+                    try {
+                        const jsonStr = line.replace('data:', '').trim();
+                        if (jsonStr) {
+                            const parsed = JSON.parse(jsonStr);
+                            console.log("Parsed chunk:", parsed);
+                            if (parsed.done && parsed.success) {
+                                result = parsed;
+                            } else if (parsed.error) {
+                                throw new Error(parsed.error);
+                            }
+                        }
+                    } catch (e) {
+                        // Continue reading, but log for debugging
+                        console.log("Parse error on line:", line);
+                    }
+                }
+            }
+
+            console.log("Final result:", result);
+            console.log("All chunks:", allChunks);
+
+            if (result && result.seriesBible) {
+                setSeriesBible(result.seriesBible);
+                setCharacters(result.characters || []);
+                setCurrentStep(1);
+            } else {
+                console.error("No valid seriesBible found. Result:", result);
+                throw new Error("AI response parsing failed. Check console for details.");
+            }
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -298,6 +199,90 @@ export default function SeriesPage() {
         }
     };
 
+    // Step 3: Generate episode (with streaming to avoid timeout)
+    const handleGenerateEpisode = async () => {
+        setError("");
+        setIsGeneratingEpisode(true);
+
+        try {
+            const response = await fetch('/api/series', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    seriesBible,
+                    characters,
+                    episodeConfig: {
+                        episodeNumber,
+                        arcPosition: episodeNumber <= 3 ? "Introduction" : episodeNumber <= 12 ? "Rising Action" : episodeNumber <= 18 ? "Climax" : "Resolution",
+                        requiredBeats: [],
+                        charactersAppearing: characters.map((c: any) => c.name),
+                        previousSummary: "",
+                        nextEpisodeHook: ""
+                    },
+                    targetPlatform: "veo",
+                    aiModel
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Generation failed');
+            }
+
+            // Handle streaming response
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+
+            if (!reader) throw new Error("No response body");
+
+            let result: any = null;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const text = decoder.decode(value, { stream: true });
+                const lines = text.split('\n').filter(line => line.trim().startsWith('data:'));
+
+                for (const line of lines) {
+                    try {
+                        const jsonStr = line.replace('data:', '').trim();
+                        if (jsonStr) {
+                            const parsed = JSON.parse(jsonStr);
+                            if (parsed.done && parsed.success) {
+                                result = parsed;
+                            } else if (parsed.error) {
+                                throw new Error(parsed.error);
+                            }
+                        }
+                    } catch (e) {
+                        // Continue reading
+                    }
+                }
+            }
+
+            if (result) {
+                setEpisodeResult(result);
+            } else {
+                throw new Error("Failed to generate episode. Please try again.");
+            }
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsGeneratingEpisode(false);
+        }
+    };
+
+    // Reset and start over
+    const handleReset = () => {
+        localStorage.removeItem(STORAGE_KEY);
+        setSeriesBible(null);
+        setCharacters([]);
+        setEpisodeResult(null);
+        setCurrentStep(0);
+    };
+
+    // Copy helper
     const copyToClipboard = (text: string, field: string) => {
         navigator.clipboard.writeText(text);
         setCopiedField(field);
@@ -322,465 +307,206 @@ export default function SeriesPage() {
                 <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-900 rounded-full blur-[120px]" />
             </div>
 
-            <div className="max-w-5xl mx-auto px-4 sm:px-6">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6">
                 {/* Header */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
                     <h1 className="text-3xl md:text-5xl font-black mb-3">
                         Anime <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Series</span> Generator
                     </h1>
                     <p className="text-gray-400 text-sm md:text-base">
-                        Create structured prompts for 24-episode serialized anime with character consistency
+                        Tell us your concept → AI creates everything → You generate episodes
                     </p>
                 </motion.div>
 
-                {/* Project Switcher */}
-                <div className="flex items-center justify-between mb-4 bg-white/5 border border-white/10 rounded-xl p-3">
-                    <div className="relative flex-1">
-                        <button
-                            onClick={() => setShowProjectMenu(!showProjectMenu)}
-                            className="flex items-center gap-2 text-left w-full"
-                        >
-                            <Film className="w-5 h-5 text-purple-400" />
-                            <div className="flex-1 min-w-0">
-                                <div className="text-sm font-bold text-white truncate">
-                                    {seriesBible.title || "New Series"}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                    {characters.length} characters • Episode {episodeNumber}
-                                </div>
-                            </div>
-                            <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform", showProjectMenu && "rotate-180")} />
-                        </button>
-
-                        {/* Dropdown */}
-                        <AnimatePresence>
-                            {showProjectMenu && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 10 }}
-                                    className="absolute top-full left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
-                                >
-                                    <div className="max-h-64 overflow-y-auto">
-                                        {projects.map(p => (
-                                            <div
-                                                key={p.id}
-                                                className={cn(
-                                                    "flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-all cursor-pointer",
-                                                    currentProjectId === p.id && "bg-purple-500/20"
-                                                )}
-                                            >
-                                                <button
-                                                    onClick={() => loadProject(p.id)}
-                                                    className="flex-1 text-left"
-                                                >
-                                                    <div className="text-sm font-medium text-white">{p.name}</div>
-                                                    <div className="text-xs text-gray-500">
-                                                        {new Date(p.updatedAt).toLocaleDateString()}
-                                                    </div>
-                                                </button>
-                                                {projects.length > 1 && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (confirm(`Delete "${p.name}"?`)) deleteProject(p.id);
-                                                        }}
-                                                        className="p-2 text-gray-500 hover:text-red-400 transition-colors"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="border-t border-white/10">
-                                        <button
-                                            onClick={createNewProject}
-                                            className="w-full px-4 py-3 text-left text-sm font-medium text-purple-400 hover:bg-purple-500/10 flex items-center gap-2"
-                                        >
-                                            <Plus className="w-4 h-4" /> New Series Project
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-
-                    <div className="flex items-center gap-2 ml-4">
-                        <span className="text-xs text-gray-500 hidden sm:block">Auto-saved</span>
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    </div>
-                </div>
-
-                {/* Tabs */}
-                <div className="flex gap-1 bg-gray-900/50 rounded-xl p-1 mb-6">
-                    {TABS.map((tab, i) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(i)}
-                            className={cn(
-                                "flex-1 py-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2",
-                                activeTab === i
-                                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                                    : "text-gray-500 hover:text-white"
-                            )}
-                        >
-                            {i === 0 && <BookOpen className="w-4 h-4" />}
-                            {i === 1 && <User className="w-4 h-4" />}
-                            {i === 2 && <Play className="w-4 h-4" />}
-                            {tab}
-                        </button>
+                {/* Step Indicator */}
+                <div className="flex items-center justify-center gap-2 mb-8">
+                    {STEPS.map((step, i) => (
+                        <div key={step} className="flex items-center gap-2">
+                            <button
+                                onClick={() => i < currentStep && setCurrentStep(i)}
+                                disabled={i > currentStep}
+                                className={cn(
+                                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+                                    i === currentStep ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white" :
+                                        i < currentStep ? "bg-purple-500/30 text-purple-300 cursor-pointer hover:bg-purple-500/50" :
+                                            "bg-gray-800 text-gray-500"
+                                )}
+                            >
+                                {i + 1}
+                            </button>
+                            <span className={cn(
+                                "text-sm font-medium hidden sm:block",
+                                i === currentStep ? "text-white" : "text-gray-500"
+                            )}>{step}</span>
+                            {i < STEPS.length - 1 && <div className="w-8 h-0.5 bg-gray-700" />}
+                        </div>
                     ))}
                 </div>
 
-                {/* Tab Content */}
+                {/* Content */}
                 <AnimatePresence mode="wait">
-                    {/* Series Bible Tab */}
-                    {activeTab === 0 && (
+                    {/* STEP 0: Concept Form */}
+                    {currentStep === 0 && (
                         <motion.div
-                            key="bible"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="space-y-4"
-                        >
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-2">Series Title *</label>
-                                    <input
-                                        type="text"
-                                        value={seriesBible.title}
-                                        onChange={(e) => setSeriesBible({ ...seriesBible, title: e.target.value })}
-                                        placeholder="e.g., Shadow Hunters: The Last Light"
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-2">Genre</label>
-                                    <select
-                                        value={seriesBible.genre}
-                                        onChange={(e) => setSeriesBible({ ...seriesBible, genre: e.target.value })}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-                                    >
-                                        <option value="Action/Adventure">Action/Adventure</option>
-                                        <option value="Fantasy">Fantasy</option>
-                                        <option value="Sci-Fi">Sci-Fi</option>
-                                        <option value="Romance">Romance</option>
-                                        <option value="Horror">Horror</option>
-                                        <option value="Comedy">Comedy</option>
-                                        <option value="Slice of Life">Slice of Life</option>
-                                        <option value="Mecha">Mecha</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Themes</label>
-                                <div className="flex gap-2 mb-2 flex-wrap">
-                                    {seriesBible.themes.map((t, i) => (
-                                        <span key={i} className="px-3 py-1 bg-purple-500/20 border border-purple-500/30 rounded-full text-xs text-purple-300 flex items-center gap-1">
-                                            {t}
-                                            <button onClick={() => setSeriesBible({ ...seriesBible, themes: seriesBible.themes.filter((_, j) => j !== i) })}>
-                                                <Trash2 className="w-3 h-3" />
-                                            </button>
-                                        </span>
-                                    ))}
-                                </div>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={themeInput}
-                                        onChange={(e) => setThemeInput(e.target.value)}
-                                        placeholder="Add theme (e.g., redemption, friendship)"
-                                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm"
-                                        onKeyDown={(e) => e.key === 'Enter' && addTheme()}
-                                    />
-                                    <button onClick={addTheme} className="px-4 py-2 bg-purple-500/30 rounded-xl text-purple-300 text-sm font-bold">
-                                        <Plus className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">World Rules</label>
-                                <textarea
-                                    value={seriesBible.worldRules}
-                                    onChange={(e) => setSeriesBible({ ...seriesBible, worldRules: e.target.value })}
-                                    placeholder="Describe the rules of your world (magic system, technology level, society structure...)"
-                                    className="w-full h-24 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white resize-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Tone Guide</label>
-                                <textarea
-                                    value={seriesBible.toneGuide}
-                                    onChange={(e) => setSeriesBible({ ...seriesBible, toneGuide: e.target.value })}
-                                    placeholder="e.g., Dark and gritty with moments of levity, Demon Slayer-inspired emotional intensity"
-                                    className="w-full h-20 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white resize-none"
-                                />
-                            </div>
-
-                            <div className="flex items-center justify-between pt-4">
-                                <div className="text-sm text-gray-500">
-                                    {seriesBible.title ? "✓ Series bible configured" : "Fill in at least the title to continue"}
-                                </div>
-                                <button
-                                    onClick={() => setActiveTab(1)}
-                                    disabled={!seriesBible.title}
-                                    className={cn(
-                                        "px-6 py-3 rounded-xl font-bold flex items-center gap-2",
-                                        seriesBible.title
-                                            ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                                            : "bg-gray-800 text-gray-500 cursor-not-allowed"
-                                    )}
-                                >
-                                    Next: Characters <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* Characters Tab */}
-                    {activeTab === 1 && (
-                        <motion.div
-                            key="chars"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="space-y-4"
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold">Characters ({characters.length})</h3>
-                                <button
-                                    onClick={addCharacter}
-                                    className="px-4 py-2 bg-purple-500/30 rounded-xl text-purple-300 text-sm font-bold flex items-center gap-2"
-                                >
-                                    <Plus className="w-4 h-4" /> Add Character
-                                </button>
-                            </div>
-
-                            {characters.length === 0 ? (
-                                <div className="text-center py-12 text-gray-500">
-                                    <User className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                                    <p>No characters yet. Add your first character to get started.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {characters.map((char, i) => (
-                                        <div key={char.id} className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <input
-                                                    type="text"
-                                                    value={char.name}
-                                                    onChange={(e) => updateCharacter(i, 'name', e.target.value)}
-                                                    placeholder="Character Name"
-                                                    className="bg-transparent text-lg font-bold text-white border-b border-transparent focus:border-purple-500 outline-none"
-                                                />
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => setEditingChar(editingChar === i ? null : i)}
-                                                        className="p-2 rounded-lg hover:bg-white/10 text-gray-400"
-                                                    >
-                                                        {editingChar === i ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setCharacters(characters.filter((_, j) => j !== i))}
-                                                        className="p-2 rounded-lg hover:bg-red-500/20 text-red-400"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {editingChar === i && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, height: 0 }}
-                                                    animate={{ opacity: 1, height: 'auto' }}
-                                                    className="space-y-4 pt-4 border-t border-white/10"
-                                                >
-                                                    <div className="grid md:grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label className="block text-xs text-gray-500 mb-1">Age</label>
-                                                            <input
-                                                                type="number"
-                                                                value={char.visualSpec.age}
-                                                                onChange={(e) => updateCharacter(i, 'visualSpec.age', parseInt(e.target.value))}
-                                                                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-xs text-gray-500 mb-1">Height & Build</label>
-                                                            <input
-                                                                type="text"
-                                                                value={char.visualSpec.height}
-                                                                onChange={(e) => updateCharacter(i, 'visualSpec.height', e.target.value)}
-                                                                placeholder="e.g., 175cm, athletic build"
-                                                                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="grid md:grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label className="block text-xs text-gray-500 mb-1">Hair</label>
-                                                            <input
-                                                                type="text"
-                                                                value={char.visualSpec.hair}
-                                                                onChange={(e) => updateCharacter(i, 'visualSpec.hair', e.target.value)}
-                                                                placeholder="e.g., Spiky black hair with red tips"
-                                                                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-xs text-gray-500 mb-1">Eyes</label>
-                                                            <input
-                                                                type="text"
-                                                                value={char.visualSpec.eyes}
-                                                                onChange={(e) => updateCharacter(i, 'visualSpec.eyes', e.target.value)}
-                                                                placeholder="e.g., Sharp amber eyes, determined expression"
-                                                                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs text-gray-500 mb-1">Outfit</label>
-                                                        <input
-                                                            type="text"
-                                                            value={char.visualSpec.outfit}
-                                                            onChange={(e) => updateCharacter(i, 'visualSpec.outfit', e.target.value)}
-                                                            placeholder="e.g., Black leather jacket with silver zippers, red t-shirt"
-                                                            className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs text-gray-500 mb-1">Personality</label>
-                                                        <textarea
-                                                            value={char.personality}
-                                                            onChange={(e) => updateCharacter(i, 'personality', e.target.value)}
-                                                            placeholder="e.g., Confident but secretly insecure, fiercely loyal to friends"
-                                                            className="w-full h-16 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm resize-none"
-                                                        />
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            <div className="flex items-center justify-between pt-4">
-                                <button onClick={() => setActiveTab(0)} className="text-gray-400 hover:text-white flex items-center gap-2">
-                                    <ChevronRight className="w-4 h-4 rotate-180" /> Back to Series Bible
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab(2)}
-                                    disabled={characters.length === 0}
-                                    className={cn(
-                                        "px-6 py-3 rounded-xl font-bold flex items-center gap-2",
-                                        characters.length > 0
-                                            ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                                            : "bg-gray-800 text-gray-500 cursor-not-allowed"
-                                    )}
-                                >
-                                    Next: Generate <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* Generate Episode Tab */}
-                    {activeTab === 2 && (
-                        <motion.div
-                            key="generate"
+                            key="concept"
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
                             className="space-y-6"
                         >
-                            {/* Episode Config */}
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-2">Episode Number</label>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        max={24}
-                                        value={episodeNumber}
-                                        onChange={(e) => setEpisodeNumber(parseInt(e.target.value))}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-2">Arc Position</label>
-                                    <select
-                                        value={arcPosition}
-                                        onChange={(e) => setArcPosition(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-                                    >
-                                        <option value="Introduction">Introduction</option>
-                                        <option value="Rising Action">Rising Action</option>
-                                        <option value="Midpoint Twist">Midpoint Twist</option>
-                                        <option value="Climax">Climax</option>
-                                        <option value="Resolution">Resolution</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Characters Selection */}
+                            {/* Genre */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Characters in this Episode</label>
-                                <div className="flex flex-wrap gap-2">
-                                    {characters.map(c => (
+                                <label className="block text-sm font-medium text-gray-400 mb-3">Genre</label>
+                                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                                    {GENRES.map(g => (
                                         <button
-                                            key={c.id}
-                                            onClick={() => setSelectedChars(
-                                                selectedChars.includes(c.id)
-                                                    ? selectedChars.filter(id => id !== c.id)
-                                                    : [...selectedChars, c.id]
-                                            )}
+                                            key={g.id}
+                                            onClick={() => setGenre(g.id)}
                                             className={cn(
-                                                "px-4 py-2 rounded-xl text-sm font-medium transition-all border",
-                                                selectedChars.includes(c.id)
-                                                    ? "bg-purple-500/30 border-purple-500/50 text-purple-300"
+                                                "p-3 rounded-xl border transition-all flex flex-col items-center gap-1",
+                                                genre === g.id
+                                                    ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
                                                     : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
                                             )}
                                         >
-                                            {c.name || "Unnamed"}
+                                            <g.icon className="w-5 h-5" />
+                                            <span className="text-xs">{g.name.split('/')[0]}</span>
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Target Platform */}
+                            {/* Hero */}
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-2">Hero Gender</label>
+                                    <div className="flex gap-2">
+                                        {["male", "female"].map(g => (
+                                            <button
+                                                key={g}
+                                                onClick={() => setHeroGender(g)}
+                                                className={cn(
+                                                    "flex-1 py-3 rounded-xl border text-sm font-medium transition-all",
+                                                    heroGender === g
+                                                        ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
+                                                        : "bg-white/5 border-white/10 text-gray-400"
+                                                )}
+                                            >
+                                                {g.charAt(0).toUpperCase() + g.slice(1)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-2">Hero Age</label>
+                                    <div className="flex gap-2">
+                                        {HERO_AGES.map(a => (
+                                            <button
+                                                key={a}
+                                                onClick={() => setHeroAge(a)}
+                                                className={cn(
+                                                    "flex-1 py-3 rounded-xl border text-xs font-medium transition-all capitalize",
+                                                    heroAge === a
+                                                        ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
+                                                        : "bg-white/5 border-white/10 text-gray-400"
+                                                )}
+                                            >
+                                                {a}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Team Size */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Target Video Platform</label>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                    {TARGET_PLATFORMS.map(p => (
+                                <label className="block text-sm font-medium text-gray-400 mb-2">Team Size</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {TEAM_SIZES.map(t => (
                                         <button
-                                            key={p.id}
-                                            onClick={() => setTargetPlatform(p.id)}
+                                            key={t.id}
+                                            onClick={() => setTeamSize(t.id)}
                                             className={cn(
-                                                "px-4 py-2.5 rounded-xl text-xs font-bold transition-all border",
-                                                targetPlatform === p.id
-                                                    ? `bg-gradient-to-r ${p.color} text-white border-transparent`
-                                                    : "bg-white/5 text-gray-400 border-white/10 hover:border-white/20"
+                                                "p-3 rounded-xl border transition-all text-left",
+                                                teamSize === t.id
+                                                    ? "bg-purple-500/20 border-purple-500/50"
+                                                    : "bg-white/5 border-white/10"
                                             )}
                                         >
-                                            {p.name}
+                                            <div className={cn("text-sm font-medium", teamSize === t.id ? "text-purple-300" : "text-gray-300")}>{t.name}</div>
+                                            <div className="text-xs text-gray-500">{t.desc}</div>
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Required Beats */}
+                            {/* Villain */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Required Story Beats (comma-separated)</label>
-                                <input
-                                    type="text"
-                                    value={requiredBeats}
-                                    onChange={(e) => setRequiredBeats(e.target.value)}
-                                    placeholder="e.g., Character reveals secret, First battle, Cliffhanger ending"
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
+                                <label className="block text-sm font-medium text-gray-400 mb-2">Villain Type</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {VILLAIN_TYPES.map(v => (
+                                        <button
+                                            key={v.id}
+                                            onClick={() => setVillainType(v.id)}
+                                            className={cn(
+                                                "p-3 rounded-xl border transition-all text-left",
+                                                villainType === v.id
+                                                    ? "bg-purple-500/20 border-purple-500/50"
+                                                    : "bg-white/5 border-white/10"
+                                            )}
+                                        >
+                                            <div className={cn("text-sm font-medium", villainType === v.id ? "text-purple-300" : "text-gray-300")}>{v.name}</div>
+                                            <div className="text-xs text-gray-500">{v.desc}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Style */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-2">Tone/Style</label>
+                                <div className="flex gap-2">
+                                    {STYLES.map(s => (
+                                        <button
+                                            key={s.id}
+                                            onClick={() => setStyle(s.id)}
+                                            className={cn(
+                                                "flex-1 py-3 rounded-xl border text-sm font-medium transition-all",
+                                                style === s.id
+                                                    ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
+                                                    : "bg-white/5 border-white/10 text-gray-400"
+                                            )}
+                                        >
+                                            {s.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* AI Model Selector */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-2">AI Model</label>
+                                <select
+                                    value={aiModel}
+                                    onChange={(e) => setAiModel(e.target.value)}
+                                    className="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-white [&>option]:bg-gray-900 [&>option]:text-white"
+                                >
+                                    {INTELLIGENCE_MODELS.map(m => (
+                                        <option key={m.id} value={m.id}>
+                                            {m.name} - {m.desc}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Custom Concept */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-2">Custom Concept (Optional)</label>
+                                <textarea
+                                    value={customConcept}
+                                    onChange={(e) => setCustomConcept(e.target.value)}
+                                    placeholder="Add any specific ideas: 'The hero has fire powers', 'Set in ancient Japan', 'The villain is the hero's brother'..."
+                                    className="w-full h-20 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white resize-none text-sm"
                                 />
                             </div>
 
@@ -793,18 +519,160 @@ export default function SeriesPage() {
 
                             {/* Generate Button */}
                             <button
-                                onClick={handleGenerate}
-                                disabled={isGenerating || selectedChars.length === 0}
+                                onClick={handleGenerateConcept}
+                                disabled={isGenerating}
                                 className={cn(
                                     "w-full py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3",
                                     isGenerating
                                         ? "bg-gray-700 text-gray-400 cursor-wait"
-                                        : selectedChars.length === 0
-                                            ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                                            : "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 shadow-lg shadow-purple-500/20"
+                                        : "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 shadow-lg shadow-purple-500/20"
                                 )}
                             >
                                 {isGenerating ? (
+                                    <><RefreshCw className="w-5 h-5 animate-spin" /> AI is creating your series...</>
+                                ) : (
+                                    <><Wand2 className="w-5 h-5" /> Generate Series with AI</>
+                                )}
+                            </button>
+                        </motion.div>
+                    )}
+
+                    {/* STEP 1: AI Review */}
+                    {currentStep === 1 && seriesBible && (
+                        <motion.div
+                            key="review"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            className="space-y-6"
+                        >
+                            {/* Series Bible Card */}
+                            <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-5">
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-xs font-bold text-purple-400 uppercase">Series Bible</span>
+                                    <button onClick={handleReset} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1">
+                                        <Trash2 className="w-3 h-3" /> Start Over
+                                    </button>
+                                </div>
+                                <h2 className="text-2xl font-black text-white mb-2">{seriesBible.title}</h2>
+                                <p className="text-gray-400 text-sm mb-4">{seriesBible.worldRules}</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {seriesBible.themes?.map((t: string, i: number) => (
+                                        <span key={i} className="px-2 py-1 bg-purple-500/20 rounded-full text-xs text-purple-300">{t}</span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Characters */}
+                            <div>
+                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <Users className="w-5 h-5 text-purple-400" /> Characters ({characters.length})
+                                </h3>
+                                <div className="space-y-3">
+                                    {characters.map((char: any, i: number) => (
+                                        <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div>
+                                                    <span className={cn(
+                                                        "text-xs font-bold uppercase px-2 py-0.5 rounded",
+                                                        char.role === 'hero' ? "bg-green-500/20 text-green-400" :
+                                                            char.role === 'villain' ? "bg-red-500/20 text-red-400" :
+                                                                "bg-blue-500/20 text-blue-400"
+                                                    )}>
+                                                        {char.role}
+                                                    </span>
+                                                    <h4 className="text-lg font-bold text-white mt-1">{char.name}</h4>
+                                                </div>
+                                                <span className="text-xs text-gray-500">{char.age} years old</span>
+                                            </div>
+                                            <div className="text-sm text-gray-400 space-y-1">
+                                                <p><span className="text-gray-500">Look:</span> {char.visualSpec?.hair}, {char.visualSpec?.eyes}</p>
+                                                <p><span className="text-gray-500">Outfit:</span> {char.visualSpec?.outfit}</p>
+                                                <p><span className="text-gray-500">Personality:</span> {char.personality}</p>
+                                                {char.powers && <p><span className="text-gray-500">Powers:</span> {char.powers}</p>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Arc Overview */}
+                            {seriesBible.arcOverview && (
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                                    <h4 className="text-sm font-bold text-gray-400 mb-2">24-Episode Arc Overview</h4>
+                                    <p className="text-sm text-gray-300">{seriesBible.arcOverview}</p>
+                                </div>
+                            )}
+
+                            {/* Continue Button */}
+                            <button
+                                onClick={() => setCurrentStep(2)}
+                                className="w-full py-4 rounded-2xl font-bold text-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 flex items-center justify-center gap-3"
+                            >
+                                Continue to Episode Generation <ArrowRight className="w-5 h-5" />
+                            </button>
+                        </motion.div>
+                    )}
+
+                    {/* STEP 2: Generate Episodes */}
+                    {currentStep === 2 && (
+                        <motion.div
+                            key="generate"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            className="space-y-6"
+                        >
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-lg font-bold">{seriesBible?.title}</h3>
+                                    <p className="text-sm text-gray-500">{characters.length} characters ready</p>
+                                </div>
+                                <button onClick={() => setCurrentStep(1)} className="text-sm text-purple-400 hover:text-purple-300">
+                                    Edit Setup
+                                </button>
+                            </div>
+
+                            {/* Episode Selector */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-2">Select Episode</label>
+                                <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
+                                    {Array.from({ length: 24 }, (_, i) => i + 1).map(ep => (
+                                        <button
+                                            key={ep}
+                                            onClick={() => setEpisodeNumber(ep)}
+                                            className={cn(
+                                                "py-2 rounded-lg text-sm font-bold transition-all",
+                                                episodeNumber === ep
+                                                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                                                    : "bg-white/5 text-gray-500 hover:text-white"
+                                            )}
+                                        >
+                                            {ep}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Error */}
+                            {error && (
+                                <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                                    {error}
+                                </div>
+                            )}
+
+                            {/* Generate Button */}
+                            <button
+                                onClick={handleGenerateEpisode}
+                                disabled={isGeneratingEpisode}
+                                className={cn(
+                                    "w-full py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3",
+                                    isGeneratingEpisode
+                                        ? "bg-gray-700 text-gray-400 cursor-wait"
+                                        : "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90"
+                                )}
+                            >
+                                {isGeneratingEpisode ? (
                                     <><RefreshCw className="w-5 h-5 animate-spin" /> Generating Episode {episodeNumber}...</>
                                 ) : (
                                     <><Film className="w-5 h-5" /> Generate Episode {episodeNumber} Prompts</>
@@ -812,85 +680,41 @@ export default function SeriesPage() {
                             </button>
 
                             {/* Results */}
-                            {result && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="space-y-4 mt-8"
-                                >
-                                    <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-5">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold text-purple-400">EPISODE {episodeNumber}</span>
-                                        </div>
-                                        <p className="text-xl font-bold text-white">{result.episodeTitle}</p>
-                                        <p className="text-gray-400 text-sm mt-2">{result.episodeSummary}</p>
+                            {episodeResult && (
+                                <div className="space-y-4 mt-6">
+                                    <div className="bg-gradient-to-r from-green-500/10 to-teal-500/10 border border-green-500/20 rounded-2xl p-5">
+                                        <span className="text-xs font-bold text-green-400">EPISODE {episodeNumber}</span>
+                                        <h3 className="text-xl font-bold text-white">{episodeResult.episodeTitle}</h3>
+                                        <p className="text-gray-400 text-sm mt-2">{episodeResult.episodeSummary}</p>
                                     </div>
 
-                                    {/* Reasoning */}
-                                    {result.reasoning && (
-                                        <div className="bg-gray-800/20 rounded-2xl border border-white/5 overflow-hidden">
-                                            <button
-                                                onClick={() => {
-                                                    const el = document.getElementById('series-think');
-                                                    if (el) el.classList.toggle('hidden');
-                                                }}
-                                                className="w-full px-4 py-3 flex items-center justify-between text-gray-400 hover:text-white"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <Brain className="w-4 h-4 text-purple-400" />
-                                                    <span className="text-xs font-bold uppercase">AI Reasoning</span>
-                                                </div>
-                                                <ChevronDown className="w-4 h-4" />
-                                            </button>
-                                            <div id="series-think" className="hidden px-4 pb-4">
-                                                <div className="text-xs text-gray-400 font-mono max-h-[150px] overflow-y-auto whitespace-pre-wrap">
-                                                    {result.reasoning}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Scenes */}
-                                    {result.scenes?.map((scene: any, si: number) => (
-                                        <div key={si} className="bg-white/5 border border-white/10 rounded-2xl p-5">
-                                            <h4 className="text-sm font-bold text-gray-400 mb-4">
+                                    {episodeResult.scenes?.map((scene: any, si: number) => (
+                                        <div key={si} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                                            <h4 className="text-sm font-bold text-gray-400 mb-3">
                                                 SCENE {scene.sceneNumber}: {scene.sceneType}
                                             </h4>
-                                            <div className="space-y-4">
+                                            <div className="space-y-3">
                                                 {scene.clips?.map((clip: any, ci: number) => (
-                                                    <div key={ci} className="bg-black/30 rounded-xl p-4 border border-white/5">
+                                                    <div key={ci} className="bg-black/30 rounded-lg p-3 border border-white/5">
                                                         <div className="flex items-center justify-between mb-2">
-                                                            <span className="text-xs text-purple-400 font-bold">CLIP {clip.clipNumber} ({clip.duration})</span>
+                                                            <span className="text-xs text-purple-400 font-bold">CLIP {clip.clipNumber}</span>
                                                             <button
                                                                 onClick={() => copyToClipboard(
-                                                                    `[SHOT TYPE]: ${clip.shotType}\n[CAMERA]: ${clip.camera}\n[SUBJECT]: ${clip.character}\n[ACTION]: ${clip.action}\n[CONTEXT]: ${clip.context}\n[STYLE]: ${clip.style}\n[AMBIANCE]: ${clip.ambiance}\n[AUDIO]: ${clip.audio}\n(no subtitles)`,
+                                                                    `[SHOT]: ${clip.shotType}\n[CAMERA]: ${clip.camera}\n[SUBJECT]: ${clip.character}\n[ACTION]: ${clip.action}\n[CONTEXT]: ${clip.context}\n[STYLE]: ${clip.style}\n(no subtitles)`,
                                                                     `clip-${si}-${ci}`
                                                                 )}
-                                                                className="px-3 py-1 rounded-lg bg-purple-500/20 text-purple-300 text-xs font-bold"
+                                                                className="px-2 py-1 rounded bg-purple-500/20 text-purple-300 text-xs"
                                                             >
                                                                 {copiedField === `clip-${si}-${ci}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                                                             </button>
                                                         </div>
-                                                        <div className="text-sm space-y-1 text-gray-300">
-                                                            <p><span className="text-gray-500">Shot:</span> {clip.shotType}</p>
-                                                            <p><span className="text-gray-500">Camera:</span> {clip.camera}</p>
-                                                            <p><span className="text-gray-500">Action:</span> {clip.action}</p>
-                                                            <p><span className="text-gray-500">Style:</span> {clip.style}</p>
-                                                        </div>
+                                                        <p className="text-sm text-gray-300">{clip.action}</p>
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
                                     ))}
-
-                                    {/* Cliffhanger */}
-                                    {result.cliffhanger && (
-                                        <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-xl p-4">
-                                            <span className="text-xs font-bold text-orange-400">CLIFFHANGER FOR NEXT EPISODE</span>
-                                            <p className="text-gray-300 text-sm mt-1">{result.cliffhanger}</p>
-                                        </div>
-                                    )}
-                                </motion.div>
+                                </div>
                             )}
                         </motion.div>
                     )}
