@@ -13,6 +13,7 @@ import { ParsedCharacter, ParsedStory, StoryAsset, formatCharactersForPrompt, fo
 export interface SceneOutline {
     sceneNumber: number;
     sceneType: 'intro' | 'action' | 'dialogue' | 'flashback' | 'climax' | 'transition';
+    volume?: 'INT' | 'EXT'; // Method 5: Scene Boxing
     description: string;
     masterVisuals: string; // Method 1: The "Source of Truth" block
     charactersInvolved: string[];
@@ -203,16 +204,22 @@ OUTPUT (JSON only, no markdown):
     {
       "sceneNumber": 1,
       "sceneType": "intro|action|dialogue|flashback|climax|transition",
-      "masterVisuals": "A technical 'Source of Truth' description of the setting. Include materials (e.g., 'gray cracked concrete slabs'), landmarks, and fixed structures. NEVER mention characters or action here.",
+      "volume": "INT|EXT",
+      "masterVisuals": "A technical 'Source of Truth' description of the setting. Include materials, landmarks, and fixed structures. NEVER mention characters or action here.",
       "description": "What happens in this scene.",
       "charactersInvolved": ["Character Name 1"],
       "clipCount": 3,
-      "seed": 1234567, // Generate a random 7-digit integer
+      "seed": 1234567,
       "endState": "Brief description of how scene ends"
     }
   ],
   "cliffhanger": "Episode ending hook"
 }
+
+CRITICAL CONSISTENCY RULES:
+1. SCENE BOXING (Method 5): Strictly separate interior (INT) and exterior (EXT). Do not describe the outside street in an INT scene unless it is 'visible through a window'.
+2. MASTER VISUALS (Method 1): The masterVisuals block MUST be technical and static (no movements, no characters).
+3. SEED LOCKING (Method 3): Generate a unique seed for each scene to ensure 'genetic' style consistency.
 
 RULES:
 1. Use EXACT character names from the list above
@@ -285,7 +292,8 @@ CRITICAL RULES FOR PRODUCTION CONSISTENCY:
 2. NEGATIVE PROMPTING (Method 2): Use the "negativePrompt" field to ban materials or lighting that might drift (e.g., ban 'wood' if the bridge is concrete).
 3. SEED LOCKING (Method 3): Use the same Seed provided in the scene context for all clips in this scene.
 4. IMAGE ANCHORING (Method 4): If this is Clip 2 or 3, refer to the "previousClipEnd" visually to ensure the camera angle change feels logical.
-5. CHARACTER TOKENS: You MUST include full visual DNA for every character.
+5. SCENE BOXING (Method 5): Verify the 'Volume' of the scene. If INT, do not describe any exterior terrain unless it is specifically 'through a window' or 'visible outside'. This prevents character 'teleportation' to the street.
+6. CHARACTER TOKENS: You MUST include full visual DNA for every character.
    - Example: "**Haru Aizawa** (messy ash-brown hair, dark gray coat, faded scarf)"
 6. SPATIAL BLOCKING: Define foreground/background layout clearly.
 7. LOCATION BRIDGING: Mention established landmarks in the distant background.

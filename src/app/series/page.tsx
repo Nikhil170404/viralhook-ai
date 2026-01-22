@@ -30,6 +30,7 @@ const STORAGE_KEY = "viralhook_series_v2";
 interface Scene {
     sceneNumber: number;
     sceneType: string;
+    volume?: string;
     description: string;
     masterVisuals: string;
     charactersInvolved: string[];
@@ -365,6 +366,7 @@ export default function SeriesPageV2() {
                     scene: {
                         sceneNumber: scene.sceneNumber,
                         sceneType: scene.sceneType,
+                        volume: scene.volume,
                         description: scene.description,
                         masterVisuals: scene.masterVisuals,
                         seed: scene.seed,
@@ -1055,6 +1057,7 @@ Name: Mina Aoyama
                                                     <div className="flex items-center justify-between mb-3">
                                                         <h4 className="text-sm font-bold text-gray-300">
                                                             SCENE {scene.sceneNumber}: <span className="text-purple-400">{scene.sceneType.toUpperCase()}</span>
+                                                            {scene.volume && <span className="ml-2 px-1.5 py-0.5 rounded bg-gray-600/30 text-[10px] text-gray-400 tracking-widest">{scene.volume}</span>}
                                                         </h4>
                                                         <div className="flex items-center gap-3">
                                                             <span className="text-xs font-mono text-gray-500">Seed: {scene.seed}</span>

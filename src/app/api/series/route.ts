@@ -41,6 +41,7 @@ interface SeriesRequest {
     scene?: {
         sceneNumber: number;
         sceneType: string;
+        volume?: string; // Method 5: Scene Boxing
         description: string;
         masterVisuals?: string;
         seed?: number;
@@ -131,6 +132,7 @@ export async function POST(req: Request) {
                 {
                     sceneNumber: scene.sceneNumber,
                     sceneType: scene.sceneType as any,
+                    volume: scene.volume as any,
                     description: scene.description,
                     masterVisuals: scene.masterVisuals || scene.description,
                     charactersInvolved: scene.charactersInvolved,
