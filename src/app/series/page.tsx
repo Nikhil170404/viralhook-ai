@@ -1,66 +1,49 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    Plus, Trash2, Copy, Check, Sparkles, Zap, ChevronDown, ChevronRight,
-    Film, User, BookOpen, Play, Brain, Cpu, RefreshCw, Wand2, Edit3,
-    Users, Swords, Skull, Heart, Laugh, Settings, ArrowRight, MessageSquare,
-    CheckCircle, Clock, Eye
+    Copy, Check, Sparkles, Zap, ChevronDown, ChevronRight,
+    Film, User, Play, Brain, Cpu, RefreshCw, Wand2, Edit3,
+    Users, Trash2, Plus, ArrowRight, AlertCircle, FileText,
+    Layers, Eye, Download, Settings2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/ui/navbar";
+import { parseStoryText, ParsedStory, ParsedCharacter, regenerateVisualDNA } from "@/lib/prompts/story-parser";
+import { ANIME_STYLES, MODES, AnimeStyle, Mode } from "@/lib/prompts/series-v2";
 
 const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// Constants
-const GENRES = [
-    { id: "action", name: "Action/Adventure", icon: Swords },
-    { id: "fantasy", name: "Fantasy", icon: Wand2 },
-    { id: "scifi", name: "Sci-Fi", icon: Cpu },
-    { id: "romance", name: "Romance", icon: Heart },
-    { id: "horror", name: "Horror", icon: Skull },
-    { id: "comedy", name: "Comedy", icon: Laugh },
+const AI_MODELS = [
+    { id: "xiaomi/mimo-v2-flash:free", name: "Fast (Instant)", icon: Zap },
+    { id: "deepseek/deepseek-r1-0528:free", name: "Quality (Thinking)", icon: Brain },
+    { id: "tngtech/deepseek-r1t-chimera:free", name: "Balanced", icon: Cpu }
 ];
 
-const INTELLIGENCE_MODELS = [
-    { id: "xiaomi/mimo-v2-flash:free", name: "Xiaomi MIMO v2 (Instant)", desc: "Fastest" },
-    { id: "deepseek/deepseek-r1-0528:free", name: "Deepseek R1 (Thinking)", desc: "Best quality" },
-    { id: "tngtech/deepseek-r1t2-chimera:free", name: "R1T2 Chimera", desc: "Hybrid" },
-];
-
-const STORAGE_KEY = "viralhook_series_data";
-
-interface Character {
-    id: string;
-    name: string;
-    role: "hero" | "friend" | "villain" | "other";
-    gender: string;
-    age: number;
-    hair: string;
-    eyes: string;
-    outfit: string;
-    personality: string;
-    powers: string;
-}
-
-interface Clip {
-    clipNumber: number;
-    status: 'pending' | 'generating' | 'completed';
-    description?: string; // from outline
-    prompt?: string;
-    data?: any; // structured data from AI
-}
+const STORAGE_KEY = "viralhook_series_v2";
 
 interface Scene {
     sceneNumber: number;
     sceneType: string;
     description: string;
+    charactersInvolved: string[];
+    clipCount: number;
+    endState?: string;
     clips: Clip[];
+}
+
+interface Clip {
+    clipNumber: number;
+    status: 'pending' | 'generating' | 'completed';
+    prompt?: string;
+    continuityNote?: string;
+    audioSuggestion?: string;
+    narratorScript?: string;
 }
 
 interface Episode {
@@ -68,154 +51,41 @@ interface Episode {
     title: string;
     summary: string;
     scenes: Scene[];
+    status: 'draft' | 'outlined' | 'generating' | 'completed';
     createdAt: string;
-    status: 'draft' | 'completed';
 }
 
-interface SeriesData {
-    seriesBible: {
-        title: string;
-        genre: string;
-        worldRules: string;
-        themes: string[];
-    } | null;
-    characters: Character[];
+interface SeriesState {
+    story: ParsedStory | null;
     episodes: Episode[];
+    mode: Mode;
+    style: AnimeStyle;
+    totalEpisodes: number;
 }
 
-const DEFAULT_CHARACTER: Character = {
-    id: "",
-    name: "",
-    role: "hero",
-    gender: "male",
-    age: 17,
-    hair: "Black, spiky",
-    eyes: "Brown, determined",
-    outfit: "School uniform with special accessory",
-    personality: "Brave, loyal, never gives up",
-    powers: "Hidden power awakening"
-};
-
-export default function SeriesPage() {
+export default function SeriesPageV2() {
     const [session, setSession] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Series Data
-    const [seriesData, setSeriesData] = useState<SeriesData>({
-        seriesBible: null,
-        characters: [],
-        episodes: []
+    // Main state
+    const [seriesState, setSeriesState] = useState<SeriesState>({
+        story: null,
+        episodes: [],
+        mode: 'anime',
+        style: 'jjk',
+        totalEpisodes: 12 // Default standard season length
     });
 
-    // UI State
-    const [activePanel, setActivePanel] = useState<"setup" | "characters" | "episodes">("setup");
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
-    const [error, setError] = useState("");
-    const [copiedField, setCopiedField] = useState<string | null>(null);
-
-    // Setup Form
-    const [title, setTitle] = useState("");
-    const [genre, setGenre] = useState("action");
-    const [worldRules, setWorldRules] = useState("");
-    const [aiModel, setAiModel] = useState("xiaomi/mimo-v2-flash:free");
-
-    // Character Form
-    const [editingChar, setEditingChar] = useState<Character | null>(null);
-    const [showCharForm, setShowCharForm] = useState(false);
-
-    // Import Mode
-    const [showImport, setShowImport] = useState(false);
+    // UI state
+    const [step, setStep] = useState<'import' | 'characters' | 'generate'>('import');
     const [importText, setImportText] = useState("");
-
-    // Parse imported story text
-    const parseImportedStory = (text: string) => {
-        try {
-            // Extract series info
-            const titleMatch = text.match(/SERIES TITLE:\s*(.+)/i);
-            const genreMatch = text.match(/GENRE:\s*(.+)/i);
-            // Use [\s\S] instead of dotAll flag for compatibility
-            const worldMatch = text.match(/WORLD RULES:\s*([\s\S]+?)(?=\n\n|---|\n[A-Z])/i);
-
-            if (!titleMatch) {
-                setError("Could not find SERIES TITLE in the text");
-                return;
-            }
-
-            const parsedTitle = titleMatch[1].trim();
-            const parsedGenre = genreMatch ? genreMatch[1].trim() : "Action/Adventure";
-            const parsedWorld = worldMatch ? worldMatch[1].trim() : "";
-
-            // Extract all characters (HERO, FRIEND, VILLAIN patterns)
-            const characterBlocks = text.split(/(?=(?:HERO|FRIEND|MAIN VILLAIN|VILLAIN|ALLY|MENTOR|RIVAL)\s*(?:\d*\s*)?CHARACTER:|(?:HERO|FRIEND|MAIN VILLAIN|VILLAIN|ALLY|MENTOR|RIVAL)\s*\d*:)/i);
-
-            const characters: Character[] = [];
-
-            for (const block of characterBlocks) {
-                if (!block.trim()) continue;
-
-                const nameMatch = block.match(/Name:\s*(.+)/i);
-                if (!nameMatch) continue;
-
-                const roleMatch = block.match(/Role:\s*(.+)/i) || block.match(/(hero|friend|villain|ally|mentor|rival)/i);
-                const genderMatch = block.match(/Gender:\s*(.+)/i);
-                const ageMatch = block.match(/Age:\s*(\d+)/i);
-                const hairMatch = block.match(/Hair:\s*(.+)/i);
-                const eyesMatch = block.match(/Eyes:\s*(.+)/i);
-                const outfitMatch = block.match(/Outfit:\s*(.+)/i);
-                const personalityMatch = block.match(/Personality:\s*(.+)/i);
-                const powersMatch = block.match(/Powers:\s*(.+)/i);
-
-                let role: "hero" | "friend" | "villain" | "other" = "other";
-                const roleText = roleMatch ? roleMatch[1].toLowerCase() : "";
-                if (roleText.includes("hero")) role = "hero";
-                else if (roleText.includes("friend") || roleText.includes("ally")) role = "friend";
-                else if (roleText.includes("villain")) role = "villain";
-
-                characters.push({
-                    id: `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    name: nameMatch[1].trim(),
-                    role,
-                    gender: genderMatch ? genderMatch[1].trim().toLowerCase() : "male",
-                    age: ageMatch ? parseInt(ageMatch[1]) : 17,
-                    hair: hairMatch ? hairMatch[1].trim() : "",
-                    eyes: eyesMatch ? eyesMatch[1].trim() : "",
-                    outfit: outfitMatch ? outfitMatch[1].trim() : "",
-                    personality: personalityMatch ? personalityMatch[1].trim() : "",
-                    powers: powersMatch ? powersMatch[1].trim() : ""
-                });
-            }
-
-            if (characters.length === 0) {
-                setError("Could not find any characters in the text. Make sure format includes 'Name:', 'Role:', etc.");
-                return;
-            }
-
-            // Set all data
-            setSeriesData({
-                seriesBible: {
-                    title: parsedTitle,
-                    genre: parsedGenre,
-                    worldRules: parsedWorld,
-                    themes: []
-                },
-                characters,
-                episodes: []
-            });
-
-            setTitle(parsedTitle);
-            setWorldRules(parsedWorld);
-            setShowImport(false);
-            setImportText("");
-            setActivePanel("characters");
-            setError("");
-
-            alert(`✅ Imported successfully!\n\n📖 Series: ${parsedTitle}\n👥 Characters: ${characters.length}\n\nReview your characters and start generating episodes!`);
-
-        } catch (err: any) {
-            setError("Failed to parse story: " + err.message);
-        }
-    };
+    const [parseErrors, setParseErrors] = useState<string[]>([]);
+    const [parseWarnings, setParseWarnings] = useState<string[]>([]);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [selectedEpisode, setSelectedEpisode] = useState<number | null>(null);
+    const [aiModel, setAiModel] = useState("deepseek/deepseek-r1-0528:free");
+    const [copiedField, setCopiedField] = useState<string | null>(null);
+    const [editingChar, setEditingChar] = useState<ParsedCharacter | null>(null);
 
     // Auth check
     useEffect(() => {
@@ -225,249 +95,118 @@ export default function SeriesPage() {
             setSession(s);
             setIsLoading(false);
 
-            // Load saved data
+            // Load saved state
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
-                const data = JSON.parse(saved) as SeriesData;
-                setSeriesData(data);
-                if (data.seriesBible) {
-                    setTitle(data.seriesBible.title);
-                    setGenre(data.seriesBible.genre || "action");
-                    setWorldRules(data.seriesBible.worldRules || "");
-                    if (data.episodes.length > 0) {
-                        setActivePanel("episodes");
-                    } else if (data.characters.length > 0) {
-                        setActivePanel("characters");
+                try {
+                    const data = JSON.parse(saved) as SeriesState;
+                    setSeriesState(data);
+                    if (data.story) {
+                        setStep(data.episodes.length > 0 ? 'generate' : 'characters');
                     }
-                }
+                } catch { }
             }
         };
         checkAuth();
     }, []);
 
-    // Save to localStorage whenever data changes
+    // Save to localStorage
     useEffect(() => {
-        if (seriesData.seriesBible || seriesData.characters.length > 0 || seriesData.episodes.length > 0) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(seriesData));
+        if (seriesState.story) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(seriesState));
         }
-    }, [seriesData]);
+    }, [seriesState]);
 
-    // Save series setup
-    const handleSaveSetup = () => {
-        if (!title.trim()) {
-            setError("Please enter a series title");
+    // Parse imported text
+    const handleParse = useCallback(() => {
+        const result = parseStoryText(importText);
+
+        if (!result.success) {
+            setParseErrors(result.errors);
+            setParseWarnings(result.warnings);
             return;
         }
-        setSeriesData(prev => ({
+
+        setSeriesState(prev => ({
             ...prev,
-            seriesBible: {
-                title,
-                genre: GENRES.find(g => g.id === genre)?.name || genre,
-                worldRules,
-                themes: []
-            }
+            story: result.data!,
+            episodes: []
         }));
-        setActivePanel("characters");
-        setError("");
-    };
+        setParseErrors([]);
+        setParseWarnings(result.warnings);
+        setStep('characters');
+    }, [importText]);
 
-    // Character management
-    const handleSaveCharacter = () => {
-        if (!editingChar?.name.trim()) {
-            setError("Please enter character name");
-            return;
-        }
+    // Update character
+    const handleSaveCharacter = useCallback(() => {
+        if (!editingChar || !seriesState.story) return;
 
-        const charWithId = {
+        // Regenerate visual DNA
+        const updated = {
             ...editingChar,
-            id: editingChar.id || `char_${Date.now()}`
+            visualDNA: regenerateVisualDNA(editingChar)
         };
 
-        setSeriesData(prev => ({
+        setSeriesState(prev => ({
             ...prev,
-            characters: editingChar.id
-                ? prev.characters.map(c => c.id === editingChar.id ? charWithId : c)
-                : [...prev.characters, charWithId]
+            story: {
+                ...prev.story!,
+                characters: prev.story!.characters.map(c =>
+                    c.id === updated.id ? updated : c
+                )
+            }
         }));
         setEditingChar(null);
-        setShowCharForm(false);
-        setError("");
-    };
+    }, [editingChar, seriesState.story]);
 
-    const handleDeleteCharacter = (id: string) => {
-        if (confirm("Delete this character?")) {
-            setSeriesData(prev => ({
-                ...prev,
-                characters: prev.characters.filter(c => c.id !== id)
-            }));
-        }
-    };
-
-    // Generate Episode Outline
-    const handleGenerateOutline = async () => {
-        if (seriesData.characters.length === 0) {
-            setError("Please add at least one character first");
-            return;
-        }
-
-        setError("");
-        setIsGenerating(true);
-        const nextEpisodeNumber = seriesData.episodes.length + 1;
-
-        try {
-            const response = await fetch('/api/series', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    seriesBible: seriesData.seriesBible,
-                    characters: seriesData.characters,
-                    episodeConfig: {
-                        episodeNumber: nextEpisodeNumber,
-                        arcPosition: nextEpisodeNumber <= 3 ? "Introduction" : nextEpisodeNumber <= 12 ? "Rising Action" : nextEpisodeNumber <= 18 ? "Climax" : "Resolution",
-                        requiredBeats: [],
-                        charactersAppearing: seriesData.characters.map(c => c.name),
-                        previousSummary: seriesData.episodes.length > 0
-                            ? seriesData.episodes[seriesData.episodes.length - 1].summary
-                            : "",
-                        nextEpisodeHook: ""
-                    },
-                    targetPlatform: "veo",
-                    aiModel,
-                    mode: 'outline'
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Generation failed');
-            }
-
-            // Handle streaming
-            const reader = response.body?.getReader();
-            const decoder = new TextDecoder();
-            if (!reader) throw new Error("No response body");
-
-            let result: any = null;
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                const text = decoder.decode(value, { stream: true });
-                const lines = text.split('\n').filter(line => line.trim().startsWith('data:'));
-                for (const line of lines) {
-                    try {
-                        const jsonStr = line.replace('data:', '').trim();
-                        if (jsonStr) {
-                            const parsed = JSON.parse(jsonStr);
-                            if (parsed.result) result = parsed.result; // Final result
-                            else if (parsed.error) throw new Error(parsed.error);
-                        }
-                    } catch (e) { console.error(e); }
-                }
-            }
-
-            if (result) {
-                // Initialize scenes with pending clips based on estimate or default to 3
-                const scenes: Scene[] = (result.scenes || []).map((s: any) => ({
-                    sceneNumber: s.sceneNumber,
-                    sceneType: s.sceneType,
-                    description: s.description,
-                    clips: Array(s.estimatedClips || 3).fill(0).map((_, i) => ({
-                        clipNumber: i + 1,
-                        status: 'pending',
-                        description: `Clip ${i + 1} of ${s.sceneType}`
-                    }))
-                }));
-
-                const newEpisode: Episode = {
-                    episodeNumber: nextEpisodeNumber,
-                    title: result.episodeTitle || `Episode ${nextEpisodeNumber}`,
-                    summary: result.episodeSummary || "",
-                    scenes,
-                    createdAt: new Date().toISOString(),
-                    status: 'draft'
-                };
-
-                setSeriesData(prev => ({
-                    ...prev,
-                    episodes: [...prev.episodes, newEpisode]
-                }));
-                setSelectedEpisode(newEpisode);
-            }
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-    // Generate Single Clip
-    const handleGenerateClip = async (episodeId: number, sceneIndex: number, clipIndex: number) => {
-        const episode = seriesData.episodes.find(e => e.episodeNumber === episodeId);
-        if (!episode) return;
-
-        const scene = episode.scenes[sceneIndex];
-        const clip = scene.clips[clipIndex];
-
-        // Optimistic update
-        const updateClipStatus = (status: 'pending' | 'generating' | 'completed', data: any = null) => {
-            setSeriesData(prev => ({
-                ...prev,
-                episodes: prev.episodes.map(e => {
-                    if (e.episodeNumber !== episodeId) return e;
-                    return {
-                        ...e,
-                        scenes: e.scenes.map((s, si) => {
-                            if (si !== sceneIndex) return s;
-                            return {
-                                ...s,
-                                clips: s.clips.map((c, ci) => {
-                                    if (ci !== clipIndex) return c;
-                                    return { ...c, status, ...data };
-                                })
-                            };
-                        })
-                    };
-                })
-            }));
-            // Update selected episode view
-            setSelectedEpisode(prev => {
-                if (!prev || prev.episodeNumber !== episodeId) return prev;
-                // Force re-render with new data from seriesData? 
-                // Actually need to replicate the transform here or rely on useEffect sync
-                // For simplicity, just mutate local state copy logic
-                const newScenes = [...prev.scenes];
-                newScenes[sceneIndex].clips[clipIndex] = { ...newScenes[sceneIndex].clips[clipIndex], status, ...data };
-                return { ...prev, scenes: newScenes };
-            });
+    // Add new character
+    const handleAddCharacter = useCallback(() => {
+        const newChar: ParsedCharacter = {
+            id: `char_${Date.now()}`,
+            name: 'New Character',
+            role: 'friend',
+            gender: 'unknown',
+            age: 18,
+            hair: '',
+            eyes: '',
+            outfit: '',
+            personality: '',
+            powers: '',
+            visualDNA: ''
         };
+        setEditingChar(newChar);
+    }, []);
 
-        updateClipStatus('generating');
+    // Delete character
+    const handleDeleteCharacter = useCallback((id: string) => {
+        if (!confirm('Delete this character?')) return;
+        setSeriesState(prev => ({
+            ...prev,
+            story: {
+                ...prev.story!,
+                characters: prev.story!.characters.filter(c => c.id !== id)
+            }
+        }));
+    }, []);
 
-        // Build previous clips summary for context
-        const prevClips = episode.scenes.flatMap(s => s.clips).filter(c => c.status === 'completed');
-        const contextSummary = prevClips.map(c => `[Clip ${c.clipNumber}]: ${c.data?.action}`).join('\n');
+    // Generate episode outline
+    const handleGenerateOutline = useCallback(async (episodeNumber: number) => {
+        if (!seriesState.story) return;
+
+        setIsGenerating(true);
+        setSelectedEpisode(episodeNumber);
 
         try {
             const response = await fetch('/api/series', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    seriesBible: seriesData.seriesBible,
-                    characters: seriesData.characters,
-                    episodeConfig: {
-                        episodeNumber: episodeId,
-                        arcPosition: "Mid",
-                        requiredBeats: [],
-                        charactersAppearing: seriesData.characters.map(c => c.name),
-                        previousSummary: "",
-                        nextEpisodeHook: ""
-                    },
-                    targetPlatform: "veo",
-                    aiModel,
-                    mode: 'clip',
-                    sceneContext: scene,
-                    clipNumber: clip.clipNumber,
-                    previousClipsSummary: contextSummary
+                    action: 'outline',
+                    story: seriesState.story,
+                    episodeNumber,
+                    mode: seriesState.mode,
+                    style: seriesState.style,
+                    aiModel
                 })
             });
 
@@ -475,54 +214,176 @@ export default function SeriesPage() {
 
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
-            if (!reader) throw new Error("No response body");
+            if (!reader) throw new Error('No response body');
 
             let result: any = null;
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
                 const text = decoder.decode(value, { stream: true });
-                const lines = text.split('\n').filter(line => line.trim().startsWith('data:'));
+                const lines = text.split('\n').filter(l => l.trim().startsWith('data:'));
                 for (const line of lines) {
                     try {
-                        const jsonStr = line.replace('data:', '').trim();
-                        if (jsonStr) {
-                            const parsed = JSON.parse(jsonStr);
-                            if (parsed.result) result = parsed.result;
-                        }
-                    } catch (e) { }
+                        const json = JSON.parse(line.replace('data:', '').trim());
+                        if (json.result) result = json.result;
+                        if (json.error) throw new Error(json.error);
+                    } catch { }
                 }
             }
 
-            if (result && result.fullPrompt) {
-                updateClipStatus('completed', {
-                    prompt: result.fullPrompt,
-                    data: result.data
-                });
-            } else {
-                updateClipStatus('pending'); // Revert on failure
-                setError("Failed to generate clip");
+            if (result) {
+                const newEpisode: Episode = {
+                    episodeNumber,
+                    title: result.episodeTitle || `Episode ${episodeNumber}`,
+                    summary: result.summary || '',
+                    scenes: (result.scenes || []).map((s: any) => ({
+                        ...s,
+                        clips: Array(s.clipCount || 2).fill(0).map((_, i) => ({
+                            clipNumber: i + 1,
+                            status: 'pending' as const
+                        }))
+                    })),
+                    status: 'outlined',
+                    createdAt: new Date().toISOString()
+                };
+
+                setSeriesState(prev => ({
+                    ...prev,
+                    episodes: [
+                        ...prev.episodes.filter(e => e.episodeNumber !== episodeNumber),
+                        newEpisode
+                    ].sort((a, b) => a.episodeNumber - b.episodeNumber)
+                }));
+            }
+        } catch (err: any) {
+            alert('Error: ' + err.message);
+        } finally {
+            setIsGenerating(false);
+        }
+    }, [seriesState, aiModel]);
+
+    // Generate single clip
+    const handleGenerateClip = useCallback(async (
+        episodeNumber: number,
+        sceneIndex: number,
+        clipIndex: number
+    ) => {
+        if (!seriesState.story) return;
+
+        const episode = seriesState.episodes.find(e => e.episodeNumber === episodeNumber);
+        if (!episode) return;
+
+        const scene = episode.scenes[sceneIndex];
+        if (!scene) return;
+
+        // Get previous clip's continuity note
+        let previousClipEnd: string | undefined;
+        if (clipIndex > 0 && scene.clips[clipIndex - 1]?.continuityNote) {
+            previousClipEnd = scene.clips[clipIndex - 1].continuityNote;
+        } else if (clipIndex === 0 && sceneIndex > 0) {
+            const prevScene = episode.scenes[sceneIndex - 1];
+            const lastClip = prevScene.clips[prevScene.clips.length - 1];
+            if (lastClip?.continuityNote) previousClipEnd = lastClip.continuityNote;
+        }
+
+        // Update status
+        setSeriesState(prev => updateClipStatus(prev, episodeNumber, sceneIndex, clipIndex, 'generating'));
+
+        try {
+            const response = await fetch('/api/series', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'clip',
+                    story: seriesState.story,
+                    episodeNumber,
+                    mode: seriesState.mode,
+                    style: seriesState.style,
+                    aiModel,
+                    scene: {
+                        sceneNumber: scene.sceneNumber,
+                        sceneType: scene.sceneType,
+                        description: scene.description,
+                        charactersInvolved: scene.charactersInvolved,
+                        clipCount: scene.clips.length
+                    },
+                    clipNumber: clipIndex + 1,
+                    previousClipEnd
+                })
+            });
+
+            if (!response.ok) throw new Error('Generation failed');
+
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            if (!reader) throw new Error('No response body');
+
+            let result: any = null;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const text = decoder.decode(value, { stream: true });
+                const lines = text.split('\n').filter(l => l.trim().startsWith('data:'));
+                for (const line of lines) {
+                    try {
+                        const json = JSON.parse(line.replace('data:', '').trim());
+                        if (json.result) result = json.result;
+                        if (json.error) throw new Error(json.error);
+                    } catch { }
+                }
             }
 
+            if (result?.prompt) {
+                setSeriesState(prev => updateClipData(prev, episodeNumber, sceneIndex, clipIndex, {
+                    status: 'completed',
+                    prompt: result.prompt,
+                    continuityNote: result.continuityNote || result.endState,
+                    audioSuggestion: result.audioSuggestion || result.audioNote,
+                    narratorScript: result.narratorScript
+                }));
+            } else {
+                setSeriesState(prev => updateClipStatus(prev, episodeNumber, sceneIndex, clipIndex, 'pending'));
+            }
         } catch (err: any) {
-            console.error(err);
-            updateClipStatus('pending');
-            setError(err.message);
+            setSeriesState(prev => updateClipStatus(prev, episodeNumber, sceneIndex, clipIndex, 'pending'));
+            alert('Error: ' + err.message);
         }
-    };
+    }, [seriesState, aiModel]);
 
+    // Helper functions
+    const updateClipStatus = (state: SeriesState, epNum: number, sceneIdx: number, clipIdx: number, status: Clip['status']): SeriesState => ({
+        ...state,
+        episodes: state.episodes.map(e => {
+            if (e.episodeNumber !== epNum) return e;
+            return {
+                ...e,
+                scenes: e.scenes.map((s, si) => {
+                    if (si !== sceneIdx) return s;
+                    return {
+                        ...s,
+                        clips: s.clips.map((c, ci) => ci === clipIdx ? { ...c, status } : c)
+                    };
+                })
+            };
+        })
+    });
 
-    // Reset series
-    const handleReset = () => {
-        if (confirm("Delete this series and start over?")) {
-            localStorage.removeItem(STORAGE_KEY);
-            setSeriesData({ seriesBible: null, characters: [], episodes: [] });
-            setTitle("");
-            setWorldRules("");
-            setActivePanel("setup");
-            setSelectedEpisode(null);
-        }
-    };
+    const updateClipData = (state: SeriesState, epNum: number, sceneIdx: number, clipIdx: number, data: Partial<Clip>): SeriesState => ({
+        ...state,
+        episodes: state.episodes.map(e => {
+            if (e.episodeNumber !== epNum) return e;
+            return {
+                ...e,
+                scenes: e.scenes.map((s, si) => {
+                    if (si !== sceneIdx) return s;
+                    return {
+                        ...s,
+                        clips: s.clips.map((c, ci) => ci === clipIdx ? { ...c, ...data } : c)
+                    };
+                })
+            };
+        })
+    });
 
     const copyToClipboard = (text: string, field: string) => {
         navigator.clipboard.writeText(text);
@@ -530,560 +391,592 @@ export default function SeriesPage() {
         setTimeout(() => setCopiedField(null), 2000);
     };
 
+    const handleReset = () => {
+        if (!confirm('Delete everything and start over?')) return;
+        localStorage.removeItem(STORAGE_KEY);
+        setSeriesState({ story: null, episodes: [], mode: 'anime', style: 'jjk', totalEpisodes: 12 });
+        setStep('import');
+        setImportText('');
+        setSelectedEpisode(null);
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500" />
+                <RefreshCw className="w-8 h-8 animate-spin text-purple-500" />
             </div>
         );
     }
+
+    const currentEpisode = seriesState.episodes.find(e => e.episodeNumber === selectedEpisode);
 
     return (
         <div className="min-h-screen bg-black text-white font-sans pt-24 pb-32">
             <Navbar />
 
             {/* Background */}
-            <div className="fixed inset-0 -z-10 opacity-30">
+            <div className="fixed inset-0 -z-10 opacity-20">
                 <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-900 rounded-full blur-[120px]" />
                 <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-900 rounded-full blur-[120px]" />
             </div>
 
             <div className="max-w-6xl mx-auto px-4 sm:px-6">
                 {/* Header */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl md:text-4xl font-black">
-                                {seriesData.seriesBible?.title || "New Series"}
-                            </h1>
-                            <p className="text-gray-500 text-sm mt-1">
-                                {seriesData.characters.length} characters • {seriesData.episodes.length} episodes
-                            </p>
-                        </div>
-                        {seriesData.seriesBible && (
-                            <button onClick={handleReset} className="text-sm text-gray-500 hover:text-red-400 flex items-center gap-1">
-                                <Trash2 className="w-4 h-4" /> Reset
-                            </button>
-                        )}
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-black">
+                            {seriesState.story?.title || 'Anime Series'} <span className="text-purple-400">Generator</span>
+                        </h1>
+                        <p className="text-gray-500 text-sm mt-1">
+                            {seriesState.story
+                                ? `${seriesState.story.characters.length} characters • ${seriesState.episodes.length} episodes`
+                                : 'Paste your story from ChatGPT to begin'}
+                        </p>
                     </div>
-                </motion.div>
+                    {seriesState.story && (
+                        <button onClick={handleReset} className="text-sm text-gray-500 hover:text-red-400 flex items-center gap-1">
+                            <Trash2 className="w-4 h-4" /> Reset
+                        </button>
+                    )}
+                </div>
 
-                {/* Navigation Tabs */}
+                {/* Step Tabs */}
                 <div className="flex gap-1 bg-gray-900/50 rounded-xl p-1 mb-6">
                     {[
-                        { id: "setup", label: "Setup", icon: Settings },
-                        { id: "characters", label: "Characters", icon: Users },
-                        { id: "episodes", label: "Episodes", icon: Film }
+                        { id: 'import', label: 'Import Story', icon: FileText, enabled: true },
+                        { id: 'characters', label: 'Characters', icon: Users, enabled: !!seriesState.story },
+                        { id: 'generate', label: 'Generate', icon: Film, enabled: !!seriesState.story && seriesState.story.characters.length > 0 }
                     ].map(tab => (
                         <button
                             key={tab.id}
-                            onClick={() => setActivePanel(tab.id as any)}
+                            onClick={() => tab.enabled && setStep(tab.id as any)}
+                            disabled={!tab.enabled}
                             className={cn(
                                 "flex-1 py-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2",
-                                activePanel === tab.id
+                                step === tab.id
                                     ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                                    : "text-gray-500 hover:text-white"
+                                    : tab.enabled
+                                        ? "text-gray-500 hover:text-white"
+                                        : "text-gray-700 cursor-not-allowed"
                             )}
                         >
                             <tab.icon className="w-4 h-4" />
                             {tab.label}
-                            {tab.id === "characters" && seriesData.characters.length > 0 && (
-                                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs">{seriesData.characters.length}</span>
-                            )}
-                            {tab.id === "episodes" && seriesData.episodes.length > 0 && (
-                                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs">{seriesData.episodes.length}</span>
-                            )}
                         </button>
                     ))}
                 </div>
 
-                {/* Error */}
-                {error && (
-                    <div className="mb-4 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                        {error}
-                    </div>
+                {/* STEP 1: IMPORT */}
+                {step === 'import' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-purple-400" />
+                                Paste Your Story from ChatGPT
+                            </h2>
+
+                            <p className="text-gray-400 text-sm mb-4">
+                                Use this format in ChatGPT: "Create an anime series with SERIES TITLE:, GENRE:, WORLD RULES:, HERO CHARACTER: (with Name:, Hair:, Eyes:, Outfit:, Powers:), FRIEND 1:, MAIN VILLAIN:, and EPISODE BRIEF:"
+                            </p>
+
+                            <textarea
+                                value={importText}
+                                onChange={(e) => setImportText(e.target.value)}
+                                placeholder={`SERIES TITLE: Eclipse of the Silent Sky
+GENRE: Action / Fantasy / Sci-Fi
+WORLD RULES: The world is governed by floating sky-continents...
+
+HERO CHARACTER:
+Name: Kaito Tsukishiro
+Role: hero
+Gender: male
+Age: 18
+Hair: Jet-black with subtle silver tips, medium length
+Eyes: Deep violet, calm but intense
+Outfit: Long black combat coat with glowing purple runes
+Personality: Determined, introspective
+Powers: Eclipse Synchronization, gravity control
+
+FRIEND 1:
+Name: Mina Aoyama
+...`}
+                                className="w-full h-80 bg-black/50 border border-white/10 rounded-xl p-4 text-sm font-mono text-gray-300 placeholder:text-gray-600 resize-none focus:border-purple-500/50 outline-none"
+                            />
+
+                            {parseErrors.length > 0 && (
+                                <div className="mt-4 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                                    <div className="flex items-center gap-2 text-red-400 font-bold text-sm mb-2">
+                                        <AlertCircle className="w-4 h-4" /> Errors
+                                    </div>
+                                    <ul className="text-sm text-red-300 list-disc list-inside">
+                                        {parseErrors.map((e, i) => <li key={i}>{e}</li>)}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {parseWarnings.length > 0 && (
+                                <div className="mt-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
+                                    <ul className="text-xs text-yellow-300">
+                                        {parseWarnings.map((w, i) => <li key={i}>⚠️ {w}</li>)}
+                                    </ul>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleParse}
+                                disabled={importText.length < 100}
+                                className={cn(
+                                    "mt-4 w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2",
+                                    importText.length >= 100
+                                        ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90"
+                                        : "bg-gray-800 text-gray-500 cursor-not-allowed"
+                                )}
+                            >
+                                <Wand2 className="w-5 h-5" />
+                                Parse Story & Extract Characters
+                            </button>
+                        </div>
+                    </motion.div>
                 )}
 
-                {/* Content */}
-                <AnimatePresence mode="wait">
-                    {/* SETUP PANEL */}
-                    {activePanel === "setup" && (
-                        <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
-                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h2 className="text-lg font-bold">Series Setup</h2>
+                {/* STEP 2: CHARACTERS */}
+                {step === 'characters' && seriesState.story && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                        {/* Mode & Style Selection */}
+                        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-wrap gap-4 items-center">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">Mode:</span>
+                                {MODES.map(m => (
                                     <button
-                                        onClick={() => setShowImport(true)}
-                                        className="text-xs bg-purple-500/20 text-purple-300 px-3 py-1.5 rounded-lg hover:bg-purple-500/30 font-medium flex items-center gap-1.5"
+                                        key={m.id}
+                                        onClick={() => setSeriesState(prev => ({ ...prev, mode: m.id as Mode }))}
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                                            seriesState.mode === m.id
+                                                ? "bg-purple-500 text-white"
+                                                : "bg-white/5 text-gray-400 hover:text-white"
+                                        )}
                                     >
-                                        <Sparkles className="w-3 h-3" />
-                                        Import from Story
+                                        {m.name}
                                     </button>
+                                ))}
+                            </div>
+
+                            {seriesState.mode === 'anime' && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500">Style:</span>
+                                    <select
+                                        value={seriesState.style}
+                                        onChange={(e) => setSeriesState(prev => ({ ...prev, style: e.target.value as AnimeStyle }))}
+                                        className="bg-gray-900 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white [&>option]:bg-gray-900"
+                                    >
+                                        {ANIME_STYLES.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
+                            )}
+                        </div>
 
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-2">Series Title *</label>
-                                        <input
-                                            type="text"
-                                            value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
-                                            placeholder="e.g., Shadow Hunters: The Last Light"
-                                            className="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-white"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-2">Genre</label>
-                                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                                            {GENRES.map(g => (
-                                                <button
-                                                    key={g.id}
-                                                    onClick={() => setGenre(g.id)}
-                                                    className={cn(
-                                                        "p-3 rounded-xl border transition-all flex flex-col items-center gap-1",
-                                                        genre === g.id
-                                                            ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
-                                                            : "bg-white/5 border-white/10 text-gray-400"
-                                                    )}
-                                                >
-                                                    <g.icon className="w-5 h-5" />
-                                                    <span className="text-xs">{g.name.split('/')[0]}</span>
-                                                </button>
-                                            ))}
+                        {/* Character Grid */}
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {seriesState.story.characters.map(char => (
+                                <div key={char.id} className="bg-white/5 border border-white/10 rounded-xl p-4 hover:border-purple-500/30 transition-all">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <div>
+                                            <span className={cn(
+                                                "text-[10px] font-bold uppercase px-2 py-0.5 rounded",
+                                                char.role === 'hero' ? "bg-green-500/20 text-green-400" :
+                                                    char.role === 'villain' ? "bg-red-500/20 text-red-400" :
+                                                        char.role === 'friend' ? "bg-blue-500/20 text-blue-400" :
+                                                            "bg-gray-500/20 text-gray-400"
+                                            )}>{char.role}</span>
+                                            <h3 className="text-lg font-bold mt-1">{char.name}</h3>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => setEditingChar({ ...char })}
+                                                className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white"
+                                            >
+                                                <Edit3 className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteCharacter(char.id)}
+                                                className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </div>
-
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-2">World Rules (Optional)</label>
-                                        <textarea
-                                            value={worldRules}
-                                            onChange={(e) => setWorldRules(e.target.value)}
-                                            placeholder="e.g., Magic exists but is forbidden. Society is divided into guilds..."
-                                            className="w-full h-24 bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-white resize-none"
-                                        />
+                                    <p className="text-xs text-gray-400 mb-2">
+                                        {char.gender}, {char.age}yo • {char.hair.slice(0, 30)}...
+                                    </p>
+                                    <div className="bg-black/30 rounded-lg p-2 text-[10px] font-mono text-purple-300 break-all">
+                                        {char.visualDNA || 'No visual DNA generated'}
                                     </div>
+                                </div>
+                            ))}
 
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-2">AI Model</label>
+                            {/* Add Character Button */}
+                            <button
+                                onClick={handleAddCharacter}
+                                className="bg-white/5 border border-dashed border-white/20 rounded-xl p-8 flex flex-col items-center justify-center gap-2 hover:bg-white/10 hover:border-purple-500/30 transition-all"
+                            >
+                                <Plus className="w-8 h-8 text-purple-400" />
+                                <span className="text-gray-400">Add Character</span>
+                            </button>
+                        </div>
+
+                        {/* Continue Button */}
+                        <button
+                            onClick={() => setStep('generate')}
+                            disabled={seriesState.story.characters.length === 0}
+                            className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white disabled:opacity-50"
+                        >
+                            Continue to Episode Generation <ArrowRight className="w-4 h-4 inline ml-2" />
+                        </button>
+
+                        {/* Character Edit Modal */}
+                        <AnimatePresence>
+                            {editingChar && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                                    onClick={() => setEditingChar(null)}
+                                >
+                                    <motion.div
+                                        initial={{ scale: 0.9 }}
+                                        animate={{ scale: 1 }}
+                                        exit={{ scale: 0.9 }}
+                                        className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto"
+                                        onClick={e => e.stopPropagation()}
+                                    >
+                                        <h3 className="text-xl font-bold mb-4">Edit Character</h3>
+
+                                        <div className="space-y-3">
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Name</label>
+                                                    <input
+                                                        type="text"
+                                                        value={editingChar.name}
+                                                        onChange={e => setEditingChar({ ...editingChar, name: e.target.value })}
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Role</label>
+                                                    <select
+                                                        value={editingChar.role}
+                                                        onChange={e => setEditingChar({ ...editingChar, role: e.target.value as any })}
+                                                        className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-sm [&>option]:bg-gray-800"
+                                                    >
+                                                        <option value="hero">Hero</option>
+                                                        <option value="friend">Friend</option>
+                                                        <option value="villain">Villain</option>
+                                                        <option value="mentor">Mentor</option>
+                                                        <option value="rival">Rival</option>
+                                                        <option value="other">Other</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Gender</label>
+                                                    <input
+                                                        type="text"
+                                                        value={editingChar.gender}
+                                                        onChange={e => setEditingChar({ ...editingChar, gender: e.target.value })}
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Age</label>
+                                                    <input
+                                                        type="number"
+                                                        value={editingChar.age}
+                                                        onChange={e => setEditingChar({ ...editingChar, age: parseInt(e.target.value) || 18 })}
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Hair</label>
+                                                <input
+                                                    type="text"
+                                                    value={editingChar.hair}
+                                                    onChange={e => setEditingChar({ ...editingChar, hair: e.target.value })}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Eyes</label>
+                                                <input
+                                                    type="text"
+                                                    value={editingChar.eyes}
+                                                    onChange={e => setEditingChar({ ...editingChar, eyes: e.target.value })}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Outfit</label>
+                                                <input
+                                                    type="text"
+                                                    value={editingChar.outfit}
+                                                    onChange={e => setEditingChar({ ...editingChar, outfit: e.target.value })}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Powers</label>
+                                                <input
+                                                    type="text"
+                                                    value={editingChar.powers}
+                                                    onChange={e => setEditingChar({ ...editingChar, powers: e.target.value })}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Personality</label>
+                                                <textarea
+                                                    value={editingChar.personality}
+                                                    onChange={e => setEditingChar({ ...editingChar, personality: e.target.value })}
+                                                    className="w-full h-16 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm resize-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3 mt-4">
+                                            <button
+                                                onClick={() => setEditingChar(null)}
+                                                className="flex-1 py-2 rounded-lg border border-white/10 text-gray-400"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={handleSaveCharacter}
+                                                className="flex-1 py-2 rounded-lg bg-purple-500 text-white font-bold"
+                                            >
+                                                Save
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                )}
+
+                {/* STEP 3: GENERATE */}
+                {step === 'generate' && seriesState.story && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        <div className="grid lg:grid-cols-3 gap-6">
+                            {/* Episode List */}
+                            <div className="lg:col-span-1 space-y-2">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-sm font-bold text-gray-400">EPISODES</h3>
+
+                                    <div className="flex gap-2">
+                                        {/* Total Episodes Selector */}
+                                        <select
+                                            value={seriesState.totalEpisodes}
+                                            onChange={e => setSeriesState(prev => ({ ...prev, totalEpisodes: parseInt(e.target.value) }))}
+                                            className="bg-gray-900 border border-white/10 rounded-lg px-2 py-1 text-xs [&>option]:bg-gray-900 w-20"
+                                            title="Total Episodes in Season"
+                                        >
+                                            <option value="12">12 Eps</option>
+                                            <option value="24">24 Eps</option>
+                                            <option value="13">13 Eps</option>
+                                            <option value="26">26 Eps</option>
+                                        </select>
+
                                         <select
                                             value={aiModel}
-                                            onChange={(e) => setAiModel(e.target.value)}
-                                            className="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-white [&>option]:bg-gray-900"
+                                            onChange={e => setAiModel(e.target.value)}
+                                            className="bg-gray-900 border border-white/10 rounded-lg px-2 py-1 text-xs [&>option]:bg-gray-900 w-24"
+                                            title="AI Model"
                                         >
-                                            {INTELLIGENCE_MODELS.map(m => (
-                                                <option key={m.id} value={m.id}>{m.name} - {m.desc}</option>
+                                            {AI_MODELS.map(m => (
+                                                <option key={m.id} value={m.id}>{m.name.split(' ')[0]}</option>
                                             ))}
                                         </select>
                                     </div>
-
-                                    <button
-                                        onClick={handleSaveSetup}
-                                        className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                                    >
-                                        Continue to Characters <ArrowRight className="w-4 h-4 inline ml-2" />
-                                    </button>
                                 </div>
-                            </div>
-                        </motion.div>
-                    )}
 
-                    {/* CHARACTERS PANEL */}
-                    {activePanel === "characters" && (
-                        <motion.div key="characters" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
-                            {/* Character List */}
-                            <div className="grid md:grid-cols-2 gap-4">
-                                {seriesData.characters.map(char => (
-                                    <div key={char.id} className="bg-white/5 border border-white/10 rounded-xl p-4">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <div>
-                                                <span className={cn(
-                                                    "text-xs font-bold uppercase px-2 py-0.5 rounded",
-                                                    char.role === 'hero' ? "bg-green-500/20 text-green-400" :
-                                                        char.role === 'villain' ? "bg-red-500/20 text-red-400" :
-                                                            "bg-blue-500/20 text-blue-400"
-                                                )}>{char.role}</span>
-                                                <h3 className="text-lg font-bold mt-1">{char.name}</h3>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button onClick={() => { setEditingChar(char); setShowCharForm(true); }} className="text-gray-500 hover:text-white">
-                                                    <Edit3 className="w-4 h-4" />
-                                                </button>
-                                                <button onClick={() => handleDeleteCharacter(char.id)} className="text-gray-500 hover:text-red-400">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <p className="text-sm text-gray-400">{char.gender}, {char.age}yo • {char.hair}</p>
-                                        <p className="text-sm text-gray-500 mt-1">{char.personality}</p>
-                                    </div>
-                                ))}
-
-                                {/* Add Character Button */}
-                                <button
-                                    onClick={() => { setEditingChar({ ...DEFAULT_CHARACTER }); setShowCharForm(true); }}
-                                    className="bg-white/5 border border-dashed border-white/20 rounded-xl p-8 flex flex-col items-center justify-center gap-2 hover:bg-white/10 transition-all"
-                                >
-                                    <Plus className="w-8 h-8 text-purple-400" />
-                                    <span className="text-gray-400">Add Character</span>
-                                </button>
-                            </div>
-
-                            {/* Continue Button */}
-                            {seriesData.characters.length > 0 && (
-                                <button
-                                    onClick={() => setActivePanel("episodes")}
-                                    className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                                >
-                                    Continue to Episodes <ArrowRight className="w-4 h-4 inline ml-2" />
-                                </button>
-                            )}
-
-                            {/* Character Form Modal */}
-                            <AnimatePresence>
-                                {showCharForm && editingChar && (
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                                        onClick={() => setShowCharForm(false)}
-                                    >
-                                        <motion.div
-                                            initial={{ scale: 0.9 }}
-                                            animate={{ scale: 1 }}
-                                            exit={{ scale: 0.9 }}
-                                            className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto"
-                                            onClick={e => e.stopPropagation()}
-                                        >
-                                            <h3 className="text-xl font-bold mb-4">{editingChar.id ? "Edit" : "Add"} Character</h3>
-
-                                            <div className="space-y-4">
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="block text-sm text-gray-400 mb-1">Name *</label>
-                                                        <input
-                                                            type="text"
-                                                            value={editingChar.name}
-                                                            onChange={e => setEditingChar({ ...editingChar, name: e.target.value })}
-                                                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm text-gray-400 mb-1">Role</label>
-                                                        <select
-                                                            value={editingChar.role}
-                                                            onChange={e => setEditingChar({ ...editingChar, role: e.target.value as any })}
-                                                            className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 [&>option]:bg-gray-800"
-                                                        >
-                                                            <option value="hero">Hero</option>
-                                                            <option value="friend">Friend/Ally</option>
-                                                            <option value="villain">Villain</option>
-                                                            <option value="other">Other</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="block text-sm text-gray-400 mb-1">Gender</label>
-                                                        <select
-                                                            value={editingChar.gender}
-                                                            onChange={e => setEditingChar({ ...editingChar, gender: e.target.value })}
-                                                            className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 [&>option]:bg-gray-800"
-                                                        >
-                                                            <option value="male">Male</option>
-                                                            <option value="female">Female</option>
-                                                            <option value="other">Other</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm text-gray-400 mb-1">Age</label>
-                                                        <input
-                                                            type="number"
-                                                            value={editingChar.age}
-                                                            onChange={e => setEditingChar({ ...editingChar, age: parseInt(e.target.value) || 17 })}
-                                                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm text-gray-400 mb-1">Hair</label>
-                                                    <input
-                                                        type="text"
-                                                        value={editingChar.hair}
-                                                        onChange={e => setEditingChar({ ...editingChar, hair: e.target.value })}
-                                                        placeholder="e.g., Black, spiky, shoulder-length"
-                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
-                                                    />
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm text-gray-400 mb-1">Eyes</label>
-                                                    <input
-                                                        type="text"
-                                                        value={editingChar.eyes}
-                                                        onChange={e => setEditingChar({ ...editingChar, eyes: e.target.value })}
-                                                        placeholder="e.g., Brown, determined expression"
-                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
-                                                    />
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm text-gray-400 mb-1">Outfit</label>
-                                                    <input
-                                                        type="text"
-                                                        value={editingChar.outfit}
-                                                        onChange={e => setEditingChar({ ...editingChar, outfit: e.target.value })}
-                                                        placeholder="e.g., Black cloak, leather armor"
-                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
-                                                    />
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm text-gray-400 mb-1">Personality</label>
-                                                    <textarea
-                                                        value={editingChar.personality}
-                                                        onChange={e => setEditingChar({ ...editingChar, personality: e.target.value })}
-                                                        placeholder="e.g., Brave, loyal, protective of friends"
-                                                        className="w-full h-16 bg-white/5 border border-white/10 rounded-lg px-3 py-2 resize-none"
-                                                    />
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm text-gray-400 mb-1">Powers/Abilities</label>
-                                                    <input
-                                                        type="text"
-                                                        value={editingChar.powers}
-                                                        onChange={e => setEditingChar({ ...editingChar, powers: e.target.value })}
-                                                        placeholder="e.g., Fire manipulation, super speed"
-                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2"
-                                                    />
-                                                </div>
-
-                                                <div className="flex gap-3 pt-2">
-                                                    <button
-                                                        onClick={() => setShowCharForm(false)}
-                                                        className="flex-1 py-2 rounded-lg border border-white/10 text-gray-400"
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                    <button
-                                                        onClick={handleSaveCharacter}
-                                                        className="flex-1 py-2 rounded-lg bg-purple-500 text-white font-bold"
-                                                    >
-                                                        Save Character
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </motion.div>
-                    )}
-
-                    {/* EPISODES PANEL */}
-                    {activePanel === "episodes" && (
-                        <motion.div key="episodes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                            <div className="grid md:grid-cols-3 gap-6">
-                                {/* Episode Timeline */}
-                                <div className="md:col-span-1 space-y-2">
-                                    <h3 className="text-sm font-bold text-gray-400 mb-3">EPISODE TIMELINE</h3>
-
-                                    {seriesData.episodes.map(ep => (
-                                        <button
-                                            key={ep.episodeNumber}
-                                            onClick={() => setSelectedEpisode(ep)}
-                                            className={cn(
-                                                "w-full p-3 rounded-xl border text-left transition-all flex items-center gap-3",
-                                                selectedEpisode?.episodeNumber === ep.episodeNumber
-                                                    ? "bg-purple-500/20 border-purple-500/50"
-                                                    : "bg-white/5 border-white/10 hover:bg-white/10"
-                                            )}
-                                        >
-                                            <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-                                            <div className="min-w-0">
-                                                <div className="text-sm font-bold">Episode {ep.episodeNumber}</div>
-                                                <div className="text-xs text-gray-500 truncate">{ep.title}</div>
-                                            </div>
-                                        </button>
-                                    ))}
-
-                                    {/* Plan Next Episode */}
+                                {/* Existing Episodes */}
+                                {seriesState.episodes.map(ep => (
                                     <button
-                                        onClick={handleGenerateOutline}
-                                        disabled={isGenerating || seriesData.characters.length === 0}
+                                        key={ep.episodeNumber}
+                                        onClick={() => setSelectedEpisode(ep.episodeNumber)}
                                         className={cn(
                                             "w-full p-3 rounded-xl border text-left transition-all flex items-center gap-3",
-                                            isGenerating
-                                                ? "bg-purple-500/10 border-purple-500/30 animate-pulse"
-                                                : "bg-white/5 border-dashed border-white/20 hover:bg-white/10"
+                                            selectedEpisode === ep.episodeNumber
+                                                ? "bg-purple-500/20 border-purple-500/50"
+                                                : "bg-white/5 border-white/10 hover:bg-white/10"
                                         )}
                                     >
-                                        {isGenerating ? (
-                                            <>
-                                                <RefreshCw className="w-5 h-5 text-purple-400 animate-spin flex-shrink-0" />
-                                                <div>
-                                                    <div className="text-sm font-bold text-purple-300">Planning...</div>
-                                                    <div className="text-xs text-gray-500">Episode {seriesData.episodes.length + 1}</div>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <BookOpen className="w-5 h-5 text-purple-400 flex-shrink-0" />
-                                                <div>
-                                                    <div className="text-sm font-bold">Plan Episode {seriesData.episodes.length + 1}</div>
-                                                    <div className="text-xs text-gray-500">Create Summary & Scenes</div>
-                                                </div>
-                                            </>
-                                        )}
+                                        <div className={cn(
+                                            "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold",
+                                            ep.status === 'completed' ? "bg-green-500/20 text-green-400" :
+                                                ep.status === 'outlined' ? "bg-purple-500/20 text-purple-400" :
+                                                    "bg-gray-500/20 text-gray-400"
+                                        )}>
+                                            {ep.episodeNumber}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="text-sm font-bold truncate">{ep.title}</div>
+                                            <div className="text-xs text-gray-500">{ep.scenes.length} scenes</div>
+                                        </div>
                                     </button>
+                                ))}
 
-                                    {seriesData.characters.length === 0 && (
-                                        <p className="text-xs text-yellow-400 mt-2">⚠️ Add characters first</p>
+                                {/* Generate New Episode Button */}
+                                <button
+                                    onClick={() => handleGenerateOutline(seriesState.episodes.length + 1)}
+                                    disabled={isGenerating}
+                                    className={cn(
+                                        "w-full p-3 rounded-xl border text-left transition-all flex items-center gap-3",
+                                        isGenerating
+                                            ? "bg-purple-500/10 border-purple-500/30 animate-pulse"
+                                            : "bg-white/5 border-dashed border-white/20 hover:bg-white/10 hover:border-purple-500/30"
                                     )}
-                                </div>
-
-                                {/* Episode Viewer */}
-                                <div className="md:col-span-2">
-                                    {selectedEpisode ? (
-                                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div>
-                                                    <span className="text-xs font-bold text-purple-400">EPISODE {selectedEpisode.episodeNumber}</span>
-                                                    <h2 className="text-xl font-bold">{selectedEpisode.title}</h2>
-                                                </div>
-                                                <span className="text-xs text-gray-500">
-                                                    {new Date(selectedEpisode.createdAt).toLocaleDateString()}
-                                                </span>
+                                >
+                                    {isGenerating ? (
+                                        <>
+                                            <RefreshCw className="w-5 h-5 text-purple-400 animate-spin" />
+                                            <div>
+                                                <div className="text-sm font-bold text-purple-300">Generating...</div>
+                                                <div className="text-xs text-gray-500">Episode {seriesState.episodes.length + 1}</div>
                                             </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Plus className="w-5 h-5 text-purple-400" />
+                                            <div>
+                                                <div className="text-sm font-bold">New Episode</div>
+                                                <div className="text-xs text-gray-500">Episode {seriesState.episodes.length + 1}</div>
+                                            </div>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
 
-                                            {selectedEpisode.summary && (
-                                                <p className="text-gray-400 text-sm mb-6">{selectedEpisode.summary}</p>
-                                            )}
+                            {/* Episode Detail / Clip Generation */}
+                            <div className="lg:col-span-2">
+                                {currentEpisode ? (
+                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div>
+                                                <span className="text-xs font-bold text-purple-400">EPISODE {currentEpisode.episodeNumber}</span>
+                                                <h2 className="text-xl font-bold">{currentEpisode.title}</h2>
+                                            </div>
+                                        </div>
 
-                                            {/* Scenes */}
-                                            <div className="space-y-4">
-                                                {selectedEpisode.scenes?.map((scene: Scene, si: number) => (
-                                                    <div key={si} className="bg-black/30 rounded-xl p-4">
-                                                        <div className="flex justify-between items-start mb-3">
-                                                            <h4 className="text-sm font-bold text-gray-300">
-                                                                SCENE {scene.sceneNumber}: {scene.sceneType}
-                                                            </h4>
-                                                            <span className="text-xs text-gray-500 max-w-[50%] text-right">{scene.description}</span>
-                                                        </div>
+                                        {currentEpisode.summary && (
+                                            <p className="text-gray-400 text-sm mb-6">{currentEpisode.summary}</p>
+                                        )}
 
-                                                        <div className="space-y-2">
-                                                            {scene.clips?.map((clip: Clip, ci: number) => (
-                                                                <div key={ci} className="bg-gray-900/50 rounded-lg p-3 border border-white/5">
-                                                                    <div className="flex items-center justify-between mb-2">
-                                                                        <span className="text-xs text-purple-400 font-bold">CLIP {clip.clipNumber}</span>
+                                        {/* Scenes */}
+                                        <div className="space-y-4">
+                                            {currentEpisode.scenes.map((scene, sceneIdx) => (
+                                                <div key={sceneIdx} className="bg-black/30 rounded-xl p-4 border border-white/5">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <h4 className="text-sm font-bold text-gray-300">
+                                                            SCENE {scene.sceneNumber}: <span className="text-purple-400">{scene.sceneType.toUpperCase()}</span>
+                                                        </h4>
+                                                        <span className="text-xs text-gray-500">{scene.clips.length} clips</span>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mb-3">{scene.description}</p>
 
+                                                    {/* Clips */}
+                                                    <div className="space-y-2">
+                                                        {scene.clips.map((clip, clipIdx) => (
+                                                            <div key={clipIdx} className="bg-gray-900/50 rounded-lg p-3 border border-white/5">
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <span className="text-xs font-bold text-purple-400">CLIP {clip.clipNumber}</span>
+
+                                                                    <div className="flex gap-2">
+                                                                        {clip.status === 'completed' && clip.narratorScript && (
+                                                                            <button
+                                                                                onClick={() => copyToClipboard(clip.narratorScript!, `script-${sceneIdx}-${clipIdx}`)}
+                                                                                className="px-2 py-1 rounded bg-blue-500/20 text-blue-300 text-xs hover:bg-blue-500/30 flex items-center gap-1"
+                                                                            >
+                                                                                {copiedField === `script-${sceneIdx}-${clipIdx}` ? <Check className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
+                                                                                Copy Script
+                                                                            </button>
+                                                                        )}
                                                                         {clip.status === 'completed' && clip.prompt && (
                                                                             <button
-                                                                                onClick={() => copyToClipboard(clip.prompt!, `clip-${si}-${ci}`)}
+                                                                                onClick={() => copyToClipboard(clip.prompt!, `clip-${sceneIdx}-${clipIdx}`)}
                                                                                 className="px-2 py-1 rounded bg-purple-500/20 text-purple-300 text-xs hover:bg-purple-500/30 flex items-center gap-1"
                                                                             >
-                                                                                {copiedField === `clip-${si}-${ci}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                                                                Copy Prompt
+                                                                                {copiedField === `clip-${sceneIdx}-${clipIdx}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                                                                Copy for Veo
                                                                             </button>
                                                                         )}
                                                                     </div>
-
-                                                                    {clip.status === 'completed' && clip.data ? (
-                                                                        <div className="text-sm text-gray-300">
-                                                                            <p className="mb-1"><span className="text-gray-500">Action:</span> {clip.data.action}</p>
-                                                                            <p className="text-xs text-gray-500"><span className="text-gray-600">Context:</span> {clip.data.context}</p>
-                                                                        </div>
-                                                                    ) : clip.status === 'generating' ? (
-                                                                        <div className="flex items-center gap-2 py-4 justify-center text-purple-400">
-                                                                            <RefreshCw className="w-4 h-4 animate-spin" />
-                                                                            <span className="text-sm font-bold">Generating Prompt...</span>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="flex flex-col gap-2">
-                                                                            <p className="text-xs text-gray-500 italic">{clip.description || "Ready to generate"}</p>
-                                                                            <button
-                                                                                onClick={() => handleGenerateClip(selectedEpisode.episodeNumber, si, ci)}
-                                                                                className="w-full py-2 rounded-lg border border-dashed border-white/20 hover:bg-white/5 text-sm text-gray-400 hover:text-white transition-all flex items-center justify-center gap-2"
-                                                                            >
-                                                                                <Sparkles className="w-3 h-3" />
-                                                                                Generate Clip {clip.clipNumber}
-                                                                            </button>
-                                                                        </div>
-                                                                    )}
                                                                 </div>
-                                                            ))}
-                                                        </div>
+
+                                                                {clip.status === 'completed' ? (
+                                                                    <div className="space-y-2">
+                                                                        {clip.narratorScript && (
+                                                                            <div className="text-xs text-blue-300 bg-blue-900/20 rounded p-2 border border-blue-500/30">
+                                                                                <span className="font-bold opacity-70 block mb-1">NARRATOR:</span>
+                                                                                "{clip.narratorScript}"
+                                                                            </div>
+                                                                        )}
+                                                                        <div className="text-xs text-gray-400 font-mono bg-black/40 rounded p-2 max-h-32 overflow-y-auto">
+                                                                            {clip.prompt}
+                                                                        </div>
+                                                                    </div>
+                                                                ) : clip.status === 'generating' ? (
+                                                                    <div className="flex items-center gap-2 py-4 justify-center text-purple-400">
+                                                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                                                        <span className="text-sm">Generating...</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => handleGenerateClip(currentEpisode.episodeNumber, sceneIdx, clipIdx)}
+                                                                        className="w-full py-2 rounded-lg border border-dashed border-white/20 hover:bg-white/5 text-sm text-gray-400 hover:text-white transition-all flex items-center justify-center gap-2"
+                                                                    >
+                                                                        <Sparkles className="w-3 h-3" />
+                                                                        Generate Clip {clip.clipNumber}
+                                                                    </button>
+                                                                )}
+
+                                                                {clip.continuityNote && (
+                                                                    <div className="mt-2 text-[10px] text-gray-600">
+                                                                        → Ends with: {clip.continuityNote}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                ))}
-                                            </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ) : (
-                                        <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center">
-                                            <MessageSquare className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                                            <h3 className="text-lg font-bold text-gray-400 mb-2">No Episode Selected</h3>
-                                            <p className="text-sm text-gray-500">
-                                                {seriesData.episodes.length > 0
-                                                    ? "Click an episode from the timeline to view"
-                                                    : "Generate your first episode to get started"}
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center">
+                                        <Film className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                                        <h3 className="text-lg font-bold text-gray-400 mb-2">No Episode Selected</h3>
+                                        <p className="text-sm text-gray-500">
+                                            Select an episode or generate a new one
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                        </motion.div>
-                    )}
-
-                    {/* IMPORT MODAL */}
-                    {showImport && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                            onClick={() => setShowImport(false)}
-                        >
-                            <motion.div
-                                initial={{ scale: 0.9 }}
-                                animate={{ scale: 1 }}
-                                exit={{ scale: 0.9 }}
-                                className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-2xl w-full"
-                                onClick={e => e.stopPropagation()}
-                            >
-                                <h3 className="text-xl font-bold mb-2">Import from Story</h3>
-                                <p className="text-sm text-gray-400 mb-4">Paste your full story text (series info + characters) below. We'll automatically parse it.</p>
-
-                                <textarea
-                                    value={importText}
-                                    onChange={(e) => setImportText(e.target.value)}
-                                    placeholder="Paste output from ChatGPT here..."
-                                    className="w-full h-64 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono resize-none focus:border-purple-500/50 outline-none"
-                                />
-
-                                <div className="flex justify-end gap-3 mt-4">
-                                    <button
-                                        onClick={() => setShowImport(false)}
-                                        className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={() => parseImportedStory(importText)}
-                                        disabled={!importText.trim()}
-                                        className="px-6 py-2 rounded-lg bg-purple-500 text-white font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Import Everything
-                                    </button>
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )}
-
-                </AnimatePresence>
+                        </div>
+                    </motion.div>
+                )}
             </div>
         </div>
     );
