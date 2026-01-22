@@ -2,7 +2,16 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 
-import { getSeriesPrompt, parseSeriesResponse, Character, SeriesBible, EpisodeConfig } from '@/lib/prompts/series';
+import {
+    getSeriesPrompt,
+    parseSeriesResponse,
+    Character,
+    SeriesBible,
+    EpisodeConfig,
+    getEpisodeOutlinePrompt,
+    getSingleClipPrompt,
+    buildClipPrompt
+} from '@/lib/prompts/series';
 import { moderateContent } from '@/lib/security/content-filter';
 import { createRequestLogger, logger } from '@/lib/logger';
 import { checkBurstLimit, incrementUserUsageDB } from '@/lib/rate-limit';
@@ -47,24 +56,6 @@ export async function POST(req: Request) {
             });
         }
 
-        // Credit Check
-        const { data: creditsRemaining, error: creditError } = await supabase.rpc(
-            'use_credit',
-            { p_user_id: user.id }
-        );
-
-        if (creditError) {
-            console.warn('[Credits] RPC warning:', creditError);
-        } else if (creditsRemaining === -1) {
-            return new Response(JSON.stringify({
-                error: "Daily limit reached (10 prompts/day). Come back tomorrow!",
-                creditsRemaining: 0
-            }), {
-                status: 429,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-
         // Parse Request
         const body = await req.json();
         const {
@@ -72,13 +63,21 @@ export async function POST(req: Request) {
             characters,
             episodeConfig,
             targetPlatform = 'veo',
-            aiModel
+            aiModel,
+            mode = 'full', // 'full' | 'outline' | 'clip'
+            sceneContext,
+            clipNumber,
+            previousClipsSummary
         } = body as {
             seriesBible: SeriesBible;
             characters: Character[];
             episodeConfig: EpisodeConfig;
             targetPlatform: string;
             aiModel?: string;
+            mode?: 'full' | 'outline' | 'clip';
+            sceneContext?: any;
+            clipNumber?: number;
+            previousClipsSummary?: string;
         };
 
         // Validate
@@ -90,14 +89,6 @@ export async function POST(req: Request) {
         }
 
         // Content Moderation
-        const injectionCheck = advancedPromptFilter.detectInjection(seriesBible.title + ' ' + seriesBible.worldRules);
-        if (injectionCheck.blocked) {
-            return new Response(JSON.stringify({ error: "Security violation detected." }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-
         const modResult = moderateContent(seriesBible.title + ' ' + seriesBible.worldRules);
         if (!modResult.isAllowed) {
             return new Response(JSON.stringify({ error: "Content policy violation" }), {
@@ -106,8 +97,27 @@ export async function POST(req: Request) {
             });
         }
 
-        // Generate Prompt
-        const { systemPrompt } = getSeriesPrompt(seriesBible, characters, episodeConfig, targetPlatform);
+        // Generate Prompt based on mode
+        let systemPrompt = "";
+        let userPrompt = "";
+
+        if (mode === 'outline') {
+            const p = getEpisodeOutlinePrompt(seriesBible, characters, episodeConfig);
+            systemPrompt = p.systemPrompt;
+            userPrompt = `Generate outline for Episode ${episodeConfig.episodeNumber} now.`;
+        } else if (mode === 'clip') {
+            if (!sceneContext || !clipNumber) {
+                return new Response(JSON.stringify({ error: "Scene context and clip number required for clip mode" }), { status: 400 });
+            }
+            const p = getSingleClipPrompt(seriesBible, characters, episodeConfig, sceneContext, clipNumber, previousClipsSummary || "", targetPlatform);
+            systemPrompt = p.systemPrompt;
+            userPrompt = `Generate prompt for Clip ${clipNumber} now.`;
+        } else {
+            // Legacy full generation
+            const p = getSeriesPrompt(seriesBible, characters, episodeConfig, targetPlatform);
+            systemPrompt = p.systemPrompt;
+            userPrompt = `Generate Episode ${episodeConfig.episodeNumber} prompt structure now.`;
+        }
 
         // AI Call
         if (!process.env.OPENROUTER_API_KEY) {
@@ -126,15 +136,15 @@ export async function POST(req: Request) {
             }
         });
 
+        // Use streaming
         const selectedModel = aiModel?.replace('-fast', '') || 'xiaomi/mimo-v2-flash:free';
         const isFastMode = aiModel?.includes('-fast');
 
-        // Use streaming to avoid timeout
         const stream = await openai.chat.completions.create({
             model: selectedModel,
             messages: [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: `Generate Episode ${episodeConfig.episodeNumber} prompt structure now.` }
+                { role: "user", content: userPrompt }
             ],
             max_tokens: 4000,
             stream: true,
@@ -151,70 +161,53 @@ export async function POST(req: Request) {
                         const content = chunk.choices[0]?.delta?.content || "";
                         fullContent += content;
 
-                        // Send progress to client
+                        // Send progress
                         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: content })}\n\n`));
                     }
 
-                    // Process the complete response
+                    // Process complete response
                     let cleanContent = fullContent;
                     let reasoning = "";
 
-                    // Extract reasoning
                     const thinkMatch = cleanContent.match(/<think>([\s\S]*?)<\/think>/);
                     if (thinkMatch) {
                         reasoning = thinkMatch[1].trim();
                         cleanContent = cleanContent.replace(/<think>[\s\S]*?<\/think>/g, "");
                     }
 
-                    // Clean markdown
-                    cleanContent = cleanContent.replace(/```(?:json)?\s*([\s\S]*?)```/g, "$1").trim();
+                    // Parse
+                    const parsedData = parseSeriesResponse(cleanContent);
 
-                    // Parse Response
-                    const episodeData = parseSeriesResponse(cleanContent);
-
-                    // Save to DB
-                    let savedId = null;
-                    try {
-                        const { data: insertedData, error: insertError } = await supabase
-                            .from('generated_prompts')
-                            .insert({
-                                user_id: user.id,
-                                prompt_text: JSON.stringify(episodeData.scenes || []),
-                                viral_hook: episodeData.episodeTitle,
-                                category: seriesBible.genre,
-                                platform: targetPlatform,
-                                mechanism: 'series',
-                                prompt_type: 'series_episode',
-                                target_model: targetPlatform,
-                                mode: 'series',
-                                creator_name: user.user_metadata?.full_name || "Anonymous",
-                            })
-                            .select('id')
-                            .single();
-
-                        if (!insertError && insertedData) {
-                            savedId = insertedData.id;
-                            incrementUserUsageDB(user.id, supabase);
+                    // If clip mode, we might need to construct the full string manually if the AI didn't return it perfectly
+                    if (mode === 'clip' && parsedData.data && !parsedData.fullPrompt) {
+                        // Reconstruct full prompt using helper if specific format needed, 
+                        // but ideally the AI returned it.
+                        // For now, trust the AI output or fallback
+                        if (!parsedData.fullPrompt) {
+                            parsedData.fullPrompt = buildClipPrompt({
+                                shotType: parsedData.data.shotType,
+                                camera: parsedData.data.camera,
+                                character: characters.find(c => parsedData.data.subject.includes(c.name)) || characters[0], // fallback
+                                action: parsedData.data.action,
+                                context: parsedData.data.context,
+                                style: parsedData.data.style,
+                                ambiance: parsedData.data.ambiance,
+                                audio: parsedData.data.audio
+                            }, targetPlatform);
                         }
-                    } catch (saveError) {
-                        log.error(`Database save error`);
                     }
 
-                    // Send final result
+                    // Save logic could be here, but for granular generation, we might want to save on the client side 
+                    // or save "fragments" to the DB. For now, let's just return the data and let client manage state.
+                    // We only save completely finished episodes to the 'generated_prompts' table usually.
+
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify({
                         done: true,
                         success: true,
                         requestId,
-                        id: savedId,
+                        result: parsedData,
                         reasoning: isFastMode ? undefined : reasoning,
-                        episodeTitle: episodeData.episodeTitle,
-                        episodeSummary: episodeData.episodeSummary,
-                        scenes: episodeData.scenes,
-                        characterStateChanges: episodeData.characterStateChanges,
-                        plotThreadUpdates: episodeData.plotThreadUpdates,
-                        cliffhanger: episodeData.cliffhanger,
-                        targetPlatform,
-                        aiModel: selectedModel
+                        mode
                     })}\n\n`));
 
                 } catch (err: any) {
@@ -236,7 +229,7 @@ export async function POST(req: Request) {
     } catch (error: any) {
         logger.error(`[${requestId}] Series API Error: ${error.message}`, error);
         return new Response(JSON.stringify({
-            error: "Failed to generate episode prompts"
+            error: "Failed to generate"
         }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }

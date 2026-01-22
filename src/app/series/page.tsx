@@ -48,12 +48,28 @@ interface Character {
     powers: string;
 }
 
+interface Clip {
+    clipNumber: number;
+    status: 'pending' | 'generating' | 'completed';
+    description?: string; // from outline
+    prompt?: string;
+    data?: any; // structured data from AI
+}
+
+interface Scene {
+    sceneNumber: number;
+    sceneType: string;
+    description: string;
+    clips: Clip[];
+}
+
 interface Episode {
     episodeNumber: number;
     title: string;
     summary: string;
-    scenes: any[];
+    scenes: Scene[];
     createdAt: string;
+    status: 'draft' | 'completed';
 }
 
 interface SeriesData {
@@ -287,8 +303,8 @@ export default function SeriesPage() {
         }
     };
 
-    // Generate episode
-    const handleGenerateEpisode = async () => {
+    // Generate Episode Outline
+    const handleGenerateOutline = async () => {
         if (seriesData.characters.length === 0) {
             setError("Please add at least one character first");
             return;
@@ -304,19 +320,7 @@ export default function SeriesPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     seriesBible: seriesData.seriesBible,
-                    characters: seriesData.characters.map(c => ({
-                        name: c.name,
-                        role: c.role,
-                        age: c.age,
-                        gender: c.gender,
-                        visualSpec: {
-                            hair: c.hair,
-                            eyes: c.eyes,
-                            outfit: c.outfit
-                        },
-                        personality: c.personality,
-                        powers: c.powers
-                    })),
+                    characters: seriesData.characters,
                     episodeConfig: {
                         episodeNumber: nextEpisodeNumber,
                         arcPosition: nextEpisodeNumber <= 3 ? "Introduction" : nextEpisodeNumber <= 12 ? "Rising Action" : nextEpisodeNumber <= 18 ? "Climax" : "Resolution",
@@ -328,7 +332,8 @@ export default function SeriesPage() {
                         nextEpisodeHook: ""
                     },
                     targetPlatform: "veo",
-                    aiModel
+                    aiModel,
+                    mode: 'outline'
                 })
             });
 
@@ -353,28 +358,40 @@ export default function SeriesPage() {
                         const jsonStr = line.replace('data:', '').trim();
                         if (jsonStr) {
                             const parsed = JSON.parse(jsonStr);
-                            if (parsed.done && parsed.success) result = parsed;
+                            if (parsed.result) result = parsed.result; // Final result
                             else if (parsed.error) throw new Error(parsed.error);
                         }
-                    } catch (e) { /* continue */ }
+                    } catch (e) { console.error(e); }
                 }
             }
 
             if (result) {
+                // Initialize scenes with pending clips based on estimate or default to 3
+                const scenes: Scene[] = (result.scenes || []).map((s: any) => ({
+                    sceneNumber: s.sceneNumber,
+                    sceneType: s.sceneType,
+                    description: s.description,
+                    clips: Array(s.estimatedClips || 3).fill(0).map((_, i) => ({
+                        clipNumber: i + 1,
+                        status: 'pending',
+                        description: `Clip ${i + 1} of ${s.sceneType}`
+                    }))
+                }));
+
                 const newEpisode: Episode = {
                     episodeNumber: nextEpisodeNumber,
                     title: result.episodeTitle || `Episode ${nextEpisodeNumber}`,
                     summary: result.episodeSummary || "",
-                    scenes: result.scenes || [],
-                    createdAt: new Date().toISOString()
+                    scenes,
+                    createdAt: new Date().toISOString(),
+                    status: 'draft'
                 };
+
                 setSeriesData(prev => ({
                     ...prev,
                     episodes: [...prev.episodes, newEpisode]
                 }));
                 setSelectedEpisode(newEpisode);
-            } else {
-                throw new Error("Failed to generate episode");
             }
         } catch (err: any) {
             setError(err.message);
@@ -382,6 +399,118 @@ export default function SeriesPage() {
             setIsGenerating(false);
         }
     };
+
+    // Generate Single Clip
+    const handleGenerateClip = async (episodeId: number, sceneIndex: number, clipIndex: number) => {
+        const episode = seriesData.episodes.find(e => e.episodeNumber === episodeId);
+        if (!episode) return;
+
+        const scene = episode.scenes[sceneIndex];
+        const clip = scene.clips[clipIndex];
+
+        // Optimistic update
+        const updateClipStatus = (status: 'pending' | 'generating' | 'completed', data: any = null) => {
+            setSeriesData(prev => ({
+                ...prev,
+                episodes: prev.episodes.map(e => {
+                    if (e.episodeNumber !== episodeId) return e;
+                    return {
+                        ...e,
+                        scenes: e.scenes.map((s, si) => {
+                            if (si !== sceneIndex) return s;
+                            return {
+                                ...s,
+                                clips: s.clips.map((c, ci) => {
+                                    if (ci !== clipIndex) return c;
+                                    return { ...c, status, ...data };
+                                })
+                            };
+                        })
+                    };
+                })
+            }));
+            // Update selected episode view
+            setSelectedEpisode(prev => {
+                if (!prev || prev.episodeNumber !== episodeId) return prev;
+                // Force re-render with new data from seriesData? 
+                // Actually need to replicate the transform here or rely on useEffect sync
+                // For simplicity, just mutate local state copy logic
+                const newScenes = [...prev.scenes];
+                newScenes[sceneIndex].clips[clipIndex] = { ...newScenes[sceneIndex].clips[clipIndex], status, ...data };
+                return { ...prev, scenes: newScenes };
+            });
+        };
+
+        updateClipStatus('generating');
+
+        // Build previous clips summary for context
+        const prevClips = episode.scenes.flatMap(s => s.clips).filter(c => c.status === 'completed');
+        const contextSummary = prevClips.map(c => `[Clip ${c.clipNumber}]: ${c.data?.action}`).join('\n');
+
+        try {
+            const response = await fetch('/api/series', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    seriesBible: seriesData.seriesBible,
+                    characters: seriesData.characters,
+                    episodeConfig: {
+                        episodeNumber: episodeId,
+                        arcPosition: "Mid",
+                        requiredBeats: [],
+                        charactersAppearing: seriesData.characters.map(c => c.name),
+                        previousSummary: "",
+                        nextEpisodeHook: ""
+                    },
+                    targetPlatform: "veo",
+                    aiModel,
+                    mode: 'clip',
+                    sceneContext: scene,
+                    clipNumber: clip.clipNumber,
+                    previousClipsSummary: contextSummary
+                })
+            });
+
+            if (!response.ok) throw new Error('Generation failed');
+
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            if (!reader) throw new Error("No response body");
+
+            let result: any = null;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const text = decoder.decode(value, { stream: true });
+                const lines = text.split('\n').filter(line => line.trim().startsWith('data:'));
+                for (const line of lines) {
+                    try {
+                        const jsonStr = line.replace('data:', '').trim();
+                        if (jsonStr) {
+                            const parsed = JSON.parse(jsonStr);
+                            if (parsed.result) result = parsed.result;
+                        }
+                    } catch (e) { }
+                }
+            }
+
+            if (result && result.fullPrompt) {
+                updateClipStatus('completed', {
+                    prompt: result.fullPrompt,
+                    data: result.data
+                });
+            } else {
+                updateClipStatus('pending'); // Revert on failure
+                setError("Failed to generate clip");
+            }
+
+        } catch (err: any) {
+            console.error(err);
+            updateClipStatus('pending');
+            setError(err.message);
+        }
+    };
+
 
     // Reset series
     const handleReset = () => {
@@ -783,9 +912,9 @@ export default function SeriesPage() {
                                         </button>
                                     ))}
 
-                                    {/* Generate Next Episode */}
+                                    {/* Plan Next Episode */}
                                     <button
-                                        onClick={handleGenerateEpisode}
+                                        onClick={handleGenerateOutline}
                                         disabled={isGenerating || seriesData.characters.length === 0}
                                         className={cn(
                                             "w-full p-3 rounded-xl border text-left transition-all flex items-center gap-3",
@@ -798,16 +927,16 @@ export default function SeriesPage() {
                                             <>
                                                 <RefreshCw className="w-5 h-5 text-purple-400 animate-spin flex-shrink-0" />
                                                 <div>
-                                                    <div className="text-sm font-bold text-purple-300">Generating...</div>
+                                                    <div className="text-sm font-bold text-purple-300">Planning...</div>
                                                     <div className="text-xs text-gray-500">Episode {seriesData.episodes.length + 1}</div>
                                                 </div>
                                             </>
                                         ) : (
                                             <>
-                                                <Plus className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                                                <BookOpen className="w-5 h-5 text-purple-400 flex-shrink-0" />
                                                 <div>
-                                                    <div className="text-sm font-bold">Generate Episode {seriesData.episodes.length + 1}</div>
-                                                    <div className="text-xs text-gray-500">Click to create</div>
+                                                    <div className="text-sm font-bold">Plan Episode {seriesData.episodes.length + 1}</div>
+                                                    <div className="text-xs text-gray-500">Create Summary & Scenes</div>
                                                 </div>
                                             </>
                                         )}
@@ -838,27 +967,54 @@ export default function SeriesPage() {
 
                                             {/* Scenes */}
                                             <div className="space-y-4">
-                                                {selectedEpisode.scenes?.map((scene: any, si: number) => (
+                                                {selectedEpisode.scenes?.map((scene: Scene, si: number) => (
                                                     <div key={si} className="bg-black/30 rounded-xl p-4">
-                                                        <h4 className="text-sm font-bold text-gray-300 mb-3">
-                                                            SCENE {scene.sceneNumber || si + 1}: {scene.sceneType || "Action"}
-                                                        </h4>
+                                                        <div className="flex justify-between items-start mb-3">
+                                                            <h4 className="text-sm font-bold text-gray-300">
+                                                                SCENE {scene.sceneNumber}: {scene.sceneType}
+                                                            </h4>
+                                                            <span className="text-xs text-gray-500 max-w-[50%] text-right">{scene.description}</span>
+                                                        </div>
+
                                                         <div className="space-y-2">
-                                                            {scene.clips?.map((clip: any, ci: number) => (
+                                                            {scene.clips?.map((clip: Clip, ci: number) => (
                                                                 <div key={ci} className="bg-gray-900/50 rounded-lg p-3 border border-white/5">
                                                                     <div className="flex items-center justify-between mb-2">
-                                                                        <span className="text-xs text-purple-400 font-bold">CLIP {clip.clipNumber || ci + 1}</span>
-                                                                        <button
-                                                                            onClick={() => copyToClipboard(
-                                                                                `[SHOT]: ${clip.shotType || "Medium"}\n[CAMERA]: ${clip.camera || "Static"}\n[SUBJECT]: ${clip.character || "Character"}\n[ACTION]: ${clip.action || ""}\n[STYLE]: ${clip.style || "Anime"}\n(no subtitles)`,
-                                                                                `clip-${si}-${ci}`
-                                                                            )}
-                                                                            className="px-2 py-1 rounded bg-purple-500/20 text-purple-300 text-xs hover:bg-purple-500/30"
-                                                                        >
-                                                                            {copiedField === `clip-${si}-${ci}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                                                        </button>
+                                                                        <span className="text-xs text-purple-400 font-bold">CLIP {clip.clipNumber}</span>
+
+                                                                        {clip.status === 'completed' && clip.prompt && (
+                                                                            <button
+                                                                                onClick={() => copyToClipboard(clip.prompt!, `clip-${si}-${ci}`)}
+                                                                                className="px-2 py-1 rounded bg-purple-500/20 text-purple-300 text-xs hover:bg-purple-500/30 flex items-center gap-1"
+                                                                            >
+                                                                                {copiedField === `clip-${si}-${ci}` ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                                                                Copy Prompt
+                                                                            </button>
+                                                                        )}
                                                                     </div>
-                                                                    <p className="text-sm text-gray-300">{clip.action}</p>
+
+                                                                    {clip.status === 'completed' && clip.data ? (
+                                                                        <div className="text-sm text-gray-300">
+                                                                            <p className="mb-1"><span className="text-gray-500">Action:</span> {clip.data.action}</p>
+                                                                            <p className="text-xs text-gray-500"><span className="text-gray-600">Context:</span> {clip.data.context}</p>
+                                                                        </div>
+                                                                    ) : clip.status === 'generating' ? (
+                                                                        <div className="flex items-center gap-2 py-4 justify-center text-purple-400">
+                                                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                                                            <span className="text-sm font-bold">Generating Prompt...</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="flex flex-col gap-2">
+                                                                            <p className="text-xs text-gray-500 italic">{clip.description || "Ready to generate"}</p>
+                                                                            <button
+                                                                                onClick={() => handleGenerateClip(selectedEpisode.episodeNumber, si, ci)}
+                                                                                className="w-full py-2 rounded-lg border border-dashed border-white/20 hover:bg-white/5 text-sm text-gray-400 hover:text-white transition-all flex items-center justify-center gap-2"
+                                                                            >
+                                                                                <Sparkles className="w-3 h-3" />
+                                                                                Generate Clip {clip.clipNumber}
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             ))}
                                                         </div>

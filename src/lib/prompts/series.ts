@@ -62,7 +62,9 @@ export interface EpisodeConfig {
 
 export function buildCharacterDescription(char: Character): string {
     const v = char.visualSpec;
-    return `${char.name}, a ${v.age}-year-old ${v.build}, ${v.height}, with ${v.hair}, ${v.eyes}, ${v.face}. Wearing ${v.outfit}. ${v.accessories ? `Accessories: ${v.accessories}.` : ''}`;
+    // Handle case where visualSpec might be simplified from import
+    if (!v) return `${char.name} (${char.id})`;
+    return `${char.name}, a ${v.age || 'young'} ${v.build || ''}, ${v.height || ''}, with ${v.hair || ''}, ${v.eyes || ''}. Wearing ${v.outfit || ''}. ${v.accessories ? `Accessories: ${v.accessories}.` : ''}`.replace(/,\s*,/g, ',');
 }
 
 export function buildCharacterBlock(chars: Character[]): string {
@@ -142,7 +144,119 @@ export function getArcGuidance(episodeNumber: number): string {
 }
 
 // ============================================================================
-// MASTER EPISODE PROMPT GENERATOR
+// STEP 1: EPISODE OUTLINE GENERATOR
+// ============================================================================
+
+export function getEpisodeOutlinePrompt(
+    seriesBible: SeriesBible,
+    characters: Character[],
+    episodeConfig: EpisodeConfig
+): { systemPrompt: string } {
+    const arcGuidance = getArcGuidance(episodeConfig.episodeNumber);
+    const characterBlock = buildCharacterBlock(
+        // Allow using raw string IDs if imports were used
+        characters.length > 0 ? characters : []
+    );
+
+    const systemPrompt = `You are an expert anime scriptwriter. Create a detailed outline for Episode ${episodeConfig.episodeNumber} of "${seriesBible.title}".
+
+=== SERIES BIBLE ===
+Title: ${seriesBible.title}
+Genre: ${seriesBible.genre}
+World Rules: ${seriesBible.worldRules}
+
+=== CHARACTERS AVAILABLE ===
+${characterBlock}
+
+=== EPISODE CONTEXT ===
+- Number: ${episodeConfig.episodeNumber}
+- Arc Position: ${episodeConfig.arcPosition}
+- Guidance: ${arcGuidance}
+- Prev Summary: ${episodeConfig.previousSummary}
+
+=== OUTPUT FORMAT ===
+Generate ONLY valid JSON:
+{
+  "episodeTitle": "string",
+  "episodeSummary": "string",
+  "scenes": [
+    {
+      "sceneNumber": 1,
+      "sceneType": "string (e.g. Intro/Action/Dialogue)",
+      "description": "Short description of what happens in this scene",
+      "charactersInvolved": ["name1", "name2"],
+      "estimatedClips": 3
+    },
+    // Generate 3-4 scenes total
+  ]
+}`;
+    return { systemPrompt };
+}
+
+// ============================================================================
+// STEP 2: SINGLE CLIP GENERATOR
+// ============================================================================
+
+export function getSingleClipPrompt(
+    seriesBible: SeriesBible,
+    characters: Character[],
+    episodeConfig: EpisodeConfig,
+    sceneContext: {
+        sceneNumber: number;
+        sceneType: string;
+        description: string;
+    },
+    clipNumber: number,
+    previousClipsSummary: string,
+    targetPlatform: string
+): { systemPrompt: string } {
+    const platformRule = getPlatformRule(targetPlatform);
+    const characterBlock = buildCharacterBlock(characters);
+
+    const systemPrompt = `You are an expert AI video prompt engineer. Generate ONE detailed video prompt for Clip ${clipNumber} of Scene ${sceneContext.sceneNumber} in Episode ${episodeConfig.episodeNumber}.
+
+=== SERIES CONTEXT ===
+Title: ${seriesBible.title}
+Genre: ${seriesBible.genre}
+World Rules: ${seriesBible.worldRules}
+
+=== CHARACTERS ===
+${characterBlock}
+
+=== SCENE CONTEXT ===
+Scene Type: ${sceneContext.sceneType}
+Description: ${sceneContext.description}
+
+=== PREVIOUS ACTION ===
+${previousClipsSummary || "This is the first clip of the scene."}
+
+=== TASK ===
+Generate the prompt for Clip ${clipNumber}.
+Target Platform: ${targetPlatform} (8 seconds duration)
+
+=== OUTPUT FORMAT ===
+Generate ONLY valid JSON:
+{
+  "clipNumber": ${clipNumber},
+  "duration": "8 seconds",
+  "data": {
+    "shotType": "string",
+    "camera": "string",
+    "subject": "detailed visual description of characters provided in CHARACTERS block",
+    "action": "specific movement",
+    "context": "environment details",
+    "style": "anime art style details",
+    "ambiance": "lighting and mood",
+    "audio": "sound effects"
+  },
+  "fullPrompt": "The complete compiled prompt string ready for copy-pasting"
+}`;
+
+    return { systemPrompt };
+}
+
+// ============================================================================
+// LEGACY MASTER PROMPT (Keep for backward compatibility)
 // ============================================================================
 
 export function getSeriesPrompt(
@@ -154,7 +268,8 @@ export function getSeriesPrompt(
     const platformRule = getPlatformRule(targetPlatform);
     const arcGuidance = getArcGuidance(episodeConfig.episodeNumber);
     const characterBlock = buildCharacterBlock(
-        characters.filter(c => episodeConfig.charactersAppearing.includes(c.id))
+        // Filter if IDs work, otherwise use all
+        characters.filter(c => episodeConfig.charactersAppearing.includes(c.id) || episodeConfig.charactersAppearing.includes(c.name))
     );
 
     const systemPrompt = `You are an expert anime scriptwriter and prompt engineer. Generate 9 video prompts (3 scenes × 3 clips of 8 seconds each) for Episode ${episodeConfig.episodeNumber} of "${seriesBible.title}".
@@ -162,20 +277,20 @@ export function getSeriesPrompt(
 === SERIES BIBLE ===
 Title: ${seriesBible.title}
 Genre: ${seriesBible.genre}
-Themes: ${seriesBible.themes.join(', ')}
-Tone: ${seriesBible.toneGuide}
+Themes: ${seriesBible.themes?.join(', ') || ''}
+Tone: ${seriesBible.toneGuide || ''}
 World Rules: ${seriesBible.worldRules}
 
 === CHARACTERS THIS EPISODE ===
 ${characterBlock}
 
 === EPISODE REQUIREMENTS ===
-- Episode Number: ${episodeConfig.episodeNumber} of ${seriesBible.totalEpisodes}
+- Episode Number: ${episodeConfig.episodeNumber} of ${seriesBible.totalEpisodes || 12}
 - Arc Position: ${episodeConfig.arcPosition}
 - Arc Guidance: ${arcGuidance}
-- Required Story Beats: ${episodeConfig.requiredBeats.join(', ')}
+- Required Story Beats: ${episodeConfig.requiredBeats?.join(', ') || 'Standard progression'}
 - Previous Episode Summary: ${episodeConfig.previousSummary || 'First episode'}
-- Setup for Next Episode: ${episodeConfig.nextEpisodeHook}
+- Setup for Next Episode: ${episodeConfig.nextEpisodeHook || ''}
 
 === TARGET PLATFORM ===
 ${targetPlatform.toUpperCase()} - ${platformRule || 'Standard settings'}
@@ -233,10 +348,11 @@ export function parseSeriesResponse(content: string): any {
     try {
         // Clean markdown blocks
         let cleaned = content.replace(/```(?:json)?\s*([\s\S]*?)```/g, "$1").trim();
-        // Extract JSON
-        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
+        // Extract JSON (find first { and last })
+        const firstBrace = cleaned.indexOf('{');
+        const lastBrace = cleaned.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+            cleaned = cleaned.substring(firstBrace, lastBrace + 1);
         }
         return JSON.parse(cleaned);
     } catch (e) {
