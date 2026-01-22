@@ -225,7 +225,8 @@ CRITICAL CONSISTENCY RULES:
 1. SCENE BOXING (Method 5): Strictly separate interior (INT) and exterior (EXT). Do not describe the outside street in an INT scene unless it is 'visible through a window'.
 2. MASTER VISUALS (Method 1): The masterVisuals block MUST be technical and static (no movements, no characters).
 3. SEED LOCKING (Method 3): Generate a unique seed for each scene to ensure 'genetic' style consistency.
-4. SPATIAL LAYERING (Method 6): Plan scenes with depth. Identify what is in the [FOREGROUND] and what is in the [BACKGROUND] to avoid the "Time vs Space" conflation (squeezing everything into one layer).
+4. SPATIAL LAYERING (Method 6): Plan scenes with depth. Identify what is in the [FOREGROUND] and what is in the [BACKGROUND] to avoid the "Time vs Space" conflation.
+5. CAMERA GEOMETRY (Method 8): If a scene involves movement (e.g. 'Walking Down'), the plan MUST specify a "High Angle" or "Low Angle" that matches the vector. Avoid placing 'steps' in the foreground if the camera is high.
 
 RULES:
 1. Use EXACT character names from the list above
@@ -300,11 +301,12 @@ CRITICAL RULES FOR PRODUCTION CONSISTENCY:
 4. IMAGE ANCHORING (Method 4): If this is Clip 2 or 3, refer to the "previousClipEnd" visually to ensure the camera angle change feels logical.
 5. SCENE BOXING (Method 5): Verify the 'Volume' of the scene. If INT, do not describe any exterior terrain unless it is specifically 'through a window' or 'visible outside'.
 6. SPATIAL LAYERING (Method 6): Define layers: [FOREGROUND], [MIDGROUND], [BACKGROUND]. Use "Extreme Depth of Field".
-7. GEOGRAPHY ANCHORING (Method 7 - THE FIX): To prevent objects from swapping sides, you MUST start with the [MASTER LAYOUT] block. 
-   - RULE: Explicitly state what is on the LEFT and what is on the RIGHT. 
-   - Example: "7-Eleven is on the RIGHT. The bicycle is on the LEFT."
-   - BANNED: Do not change these positions between clips.
-8. CHARACTER TOKENS: You MUST include full visual DNA for every character.
+7. GEOGRAPHY ANCHORING (Method 7): To prevent objects from swapping sides, use the [MASTER LAYOUT] block.
+8. CAMERA GEOMETRY & VECTOR CONTROL (Method 8 - THE FIX): To prevent the "Foreground Trap" (e.g., looking UP while moving DOWN):
+   - RULE: If the action is "Going Down" (stairs, slopes), the camera MUST be "High Angle" or "Bird's Eye," looking down from the top.
+   - RULE: If High Angle, the Foreground must be "The Top Landing" or "Character's Shoulders." NEVER put steps/risers in the foreground of a high-angle shot.
+   - RULE: Ensure the "Visual Vector" (where the character is moving) matches the "Camera Vector" (where the camera is looking).
+9. CHARACTER TOKENS: You MUST include full visual DNA for every character.
    - Example: "**Haru Aizawa** (messy ash-brown hair, dark gray coat, faded scarf)"
 8. SPATIAL BLOCKING: Define foreground/background layout clearly.
 9. LOCATION BRIDGING: Mention established landmarks in the distant background.
