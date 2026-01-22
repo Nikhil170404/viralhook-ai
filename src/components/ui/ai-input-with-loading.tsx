@@ -1,6 +1,6 @@
 "use client";
 
-import { CornerRightUp, Zap, Clapperboard, ChevronDown, Check, Sparkles, Video, Film, Camera, Cpu, Target, Layers, User } from "lucide-react";
+import { CornerRightUp, Zap, Clapperboard, ChevronDown, Check, Sparkles, Video, Film, Camera, Cpu, Target, Layers, User, Brain } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -20,9 +20,13 @@ interface AIInputWithLoadingProps {
 }
 
 const INTELLIGENCE_MODELS = [
-    { id: "xiaomi/mimo-v2-flash:free", name: "Xiaomi MIMO v2", icon: Zap, desc: "Fast & optimized for flash" },
-    { id: "tngtech/deepseek-r1t2-chimera:free", name: "TNG Chimera", icon: Target, desc: "Specialized tuning" },
-    { id: "deepseek/deepseek-r1-0528:free", name: "Deepseek R1", icon: Sparkles, desc: "Advanced reasoning & logic" },
+    { id: "deepseek/deepseek-r1-0528:free", name: "Deepseek R1 (Thinking)", icon: Sparkles, desc: "Original R1 with visible logic" },
+    { id: "xiaomi/mimo-v2-flash:free", name: "Xiaomi MIMO v2 (Instant)", icon: Zap, desc: "Fastest generation - No thinking" },
+    { id: "deepseek/deepseek-r1-0528:free-fast", name: "Deepseek R1 (No Thinking)", icon: Zap, desc: "R1 results - Thinking hidden" },
+    { id: "tngtech/deepseek-r1t2-chimera:free", name: "R1T2 Chimera (Thinking)", icon: Brain, desc: "Hybrid reasoning with logs" },
+    { id: "tngtech/deepseek-r1t2-chimera:free-fast", name: "R1T2 Chimera (No Thinking)", icon: Cpu, desc: "Hybrid results - Thinking hidden" },
+    { id: "tngtech/deepseek-r1t-chimera:free", name: "R1T Chimera (Thinking)", icon: Target, desc: "Balanced reasoning with logs" },
+    { id: "tngtech/deepseek-r1t-chimera:free-fast", name: "R1T Chimera (No Thinking)", icon: Zap, desc: "Balanced results - Thinking hidden" },
 ];
 
 const MODELS = [
@@ -51,7 +55,7 @@ export function AIInputWithLoading({
     const [isAnimating, setIsAnimating] = useState(autoAnimate);
     const [mode, setMode] = useState<'chaos' | 'cinematic' | 'shocking' | 'anime' | 'cartoon' | 'stickman'>('chaos');
     const [targetModel, setTargetModel] = useState<string>("auto");
-    const [aiModel, setAiModel] = useState<string>(INTELLIGENCE_MODELS[0].id);
+    const [aiModel, setAiModel] = useState<string>("deepseek/deepseek-r1-0528:free");
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isIntelligenceOpen, setIsIntelligenceOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);

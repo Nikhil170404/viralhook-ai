@@ -14,6 +14,8 @@ import { moderateAllInputs } from '@/lib/security/content-filter';
 import { validateGenerateRequest } from '@/lib/schemas/generate';
 import { advancedPromptFilter } from '@/lib/security/advanced-prompt-filter';
 
+export const maxDuration = 60; // Allow up to 60 seconds for Deepseek R1 reasoning
+
 const CONFIG = {
     RATE_LIMIT: {
         MAX_REQUESTS: 5,
@@ -43,8 +45,8 @@ function getClientIP(req: Request): string {
     return 'unknown';
 }
 
-function createCacheKey(object: string, mode: string, targetModel: string): string {
-    const normalized = `${object.toLowerCase().trim()}:${mode}:${targetModel || 'auto'}`;
+function createCacheKey(object: string, mode: string, targetModel: string, aiModel: string): string {
+    const normalized = `${object.toLowerCase().trim()}:${mode}:${targetModel || 'auto'}:${aiModel || 'default'}`;
     return `prompt_cache:${Buffer.from(normalized).toString('base64').slice(0, 50)}`;
 }
 
@@ -186,7 +188,7 @@ async function generateHandler(req: Request) {
             );
         }
 
-        const cacheKey = createCacheKey(object, mode!, targetModel || 'auto');
+        const cacheKey = createCacheKey(object, mode!, targetModel || 'auto', aiModel || CONFIG.AI.MODEL);
         let cachedResponse = null;
 
         try {
@@ -242,7 +244,10 @@ async function generateHandler(req: Request) {
         }
 
         const escapedObject = escapeForPrompt(object);
-        const selectedModel = aiModel || CONFIG.AI.MODEL;
+
+        // Strip -fast suffix from model ID before calling OpenRouter
+        const selectedModel = aiModel?.replace('-fast', '') || CONFIG.AI.MODEL;
+        const isFastMode = aiModel?.includes('-fast');
         let content = "";
 
         try {
@@ -255,7 +260,7 @@ async function generateHandler(req: Request) {
             });
             content = completion.choices[0].message.content || "";
         } catch (openaiError: any) {
-            log.error(`AI Generation Failed: ${openaiError.message}`, openaiError);
+            log.error(`AI Generation Failed for ${selectedModel}: ${openaiError.message}`, openaiError);
             return NextResponse.json(
                 { error: `AI Generation Failed: ${openaiError.message}` },
                 { status: 500 }
@@ -263,31 +268,57 @@ async function generateHandler(req: Request) {
         }
 
         let aiContent: any = { prompt: "Error generating", hook: "Error" };
+        let reasoning = "";
+
         try {
             let cleanContent = content;
-            cleanContent = cleanContent.replace(/<think>[\s\S]*?<\/think>/g, "");
+
+            // Extract reasoning (between <think> tags)
+            const thinkMatch = cleanContent.match(/<think>([\s\S]*?)<\/think>/);
+            if (thinkMatch) {
+                reasoning = thinkMatch[1].trim();
+                cleanContent = cleanContent.replace(/<think>[\s\S]*?<\/think>/g, "");
+            }
+
+            // Clean markdown blocks
             cleanContent = cleanContent.replace(/```(?:json)?\s*([\s\S]*?)```/g, "$1");
             cleanContent = cleanContent.trim();
+
+            if (!cleanContent || cleanContent.length < 2) {
+                throw new Error("AI returned empty content after stripping reasoning.");
+            }
 
             const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 aiContent = JSON.parse(jsonMatch[0]);
             } else {
-                aiContent = JSON.parse(cleanContent);
+                // Fallback: treat cleanContent as the prompt
+                aiContent = {
+                    prompt: cleanContent,
+                    hook: "Viral Hook Built",
+                    photoInstructions: "See platform specific guides.",
+                    expectedViews: "10M+",
+                    difficulty: "Medium",
+                    estimatedTime: "10 mins",
+                    postProcessing: "Add audio.",
+                    successRate: "High",
+                    commonIssues: "None",
+                    platformSpecific: {}
+                };
             }
         } catch (parseError: any) {
-            log.error(`AI Parse Error: ${parseError.message}`, parseError);
+            log.warn(`AI Parse Warning: ${parseError.message}`);
             aiContent = {
-                prompt: content,
+                prompt: content.replace(/<think>[\s\S]*?<\/think>/g, "").trim() || "Generation failed.",
                 hook: "Viral Content Generated",
-                photoInstructions: "See platform specific guides below.",
+                photoInstructions: "Manual prompt entry required.",
                 expectedViews: "10M+",
                 difficulty: "Medium",
                 estimatedTime: "10 mins",
                 postProcessing: "Add sound effects.",
                 successRate: "High",
                 commonIssues: "None",
-                platformSpecific: { kling: "Standard settings", runway: "Standard settings", veo: "Standard settings" }
+                platformSpecific: {}
             };
         }
 
@@ -329,6 +360,7 @@ async function generateHandler(req: Request) {
         const responseData = {
             id: existing?.id,
             prompt: aiContent.prompt,
+            reasoning: isFastMode ? undefined : reasoning, // Extract reasoning for Think mode
             category: randomStyle.category,
             platform: randomStyle.platform,
             viralHook: aiContent.hook,
@@ -382,6 +414,4 @@ async function generateHandler(req: Request) {
     }
 }
 
-// CSRF temporarily disabled - cookie setting issue on Vercel
-// TODO: Debug why csrf_token cookie is not being set by middleware
 export const POST = generateHandler;

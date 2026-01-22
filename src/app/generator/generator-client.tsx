@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, RefreshCw, LogOut, Share2, Check } from "lucide-react";
+import { Copy, RefreshCw, LogOut, Share2, Check, Brain, ChevronDown, ChevronUp } from "lucide-react";
 import { viralPrompts } from "@/lib/prompts";
 import { fetchWithCSRF } from "@/lib/api-client";
 import { AIInputWithLoading } from "@/components/ui/ai-input-with-loading";
@@ -108,7 +108,8 @@ export default function GeneratorClient({ initialSession }: GeneratorClientProps
                                         template: data.prompt,
                                         platform: data.platform || "AI Video",
                                         viralHook: data.viralHook,
-                                        personNote: data.personNote // Capture the person note
+                                        personNote: data.personNote,
+                                        reasoning: data.reasoning // Capture reasoning
                                     });
 
                                     setGeneratedResult(data.prompt);
@@ -184,10 +185,41 @@ export default function GeneratorClient({ initialSession }: GeneratorClientProps
                                         </div>
                                     )}
 
+                                    {/* AI Thought Process (Expandable - Smooth) */}
+                                    {selectedPrompt?.reasoning && (
+                                        <div className="mb-6 bg-gray-800/30 rounded-2xl border border-gray-700/30 overflow-hidden">
+                                            <button
+                                                onClick={() => {
+                                                    const content = document.getElementById('think-box');
+                                                    if (content) content.classList.toggle('hidden');
+                                                    const icon = document.getElementById('think-icon');
+                                                    if (icon) icon.classList.toggle('rotate-180');
+                                                }}
+                                                className="w-full px-4 py-3 flex items-center justify-between text-gray-400 hover:text-white transition-all group"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Brain className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+                                                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Deepseek R1 Reasoning</span>
+                                                </div>
+                                                <ChevronDown id="think-icon" className="w-4 h-4 transition-transform duration-300" />
+                                            </button>
+                                            <div id="think-box" className="hidden">
+                                                <div className="px-4 pb-4">
+                                                    <div className="text-[11px] leading-relaxed text-gray-400 bg-black/40 p-4 rounded-xl border border-white/5 font-mono max-h-[200px] overflow-y-auto custom-scrollbar italic">
+                                                        {selectedPrompt.reasoning}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Main Prompt */}
                                     <div className="mb-6">
-                                        <p className="text-xs text-gray-500 uppercase font-bold mb-2 tracking-wide">Copy this Prompt:</p>
-                                        <p className="text-base leading-relaxed text-gray-100 font-medium font-sans">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <p className="text-xs text-gray-500 uppercase font-bold tracking-wide">Final Video Prompt:</p>
+                                            <div className="h-[1px] flex-grow mx-4 bg-gray-800" />
+                                        </div>
+                                        <p className="text-base leading-relaxed text-gray-100 font-medium font-sans selection:bg-purple-500">
                                             {generatedResult}
                                         </p>
                                     </div>

@@ -31,8 +31,18 @@ export async function middleware(request: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Simplified Middleware: No redirects, just cookie handling.
-    // Client-side will handle protection.
+    // ===== CSRF TOKEN GENERATION =====
+    // Ensure csrf_token cookie is set for the double-submit pattern
+    if (!request.cookies.get('csrf_token') && request.method === 'GET') {
+        const token = crypto.randomUUID().replace(/-/g, '');
+        response.cookies.set('csrf_token', token, {
+            httpOnly: false, // Must be accessible by client JS
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 24, // 24 hours
+        });
+    }
 
     return response
 }

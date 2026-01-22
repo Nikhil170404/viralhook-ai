@@ -156,7 +156,8 @@ async function hooksHandler(req: Request) {
             }
         });
 
-        const selectedModel = aiModel || CONFIG.AI.MODEL;
+        const selectedModel = aiModel?.replace('-fast', '') || CONFIG.AI.MODEL;
+        const isFastMode = aiModel?.includes('-fast');
 
         const completion = await openai.chat.completions.create({
             model: selectedModel,
@@ -167,9 +168,21 @@ async function hooksHandler(req: Request) {
         });
 
         const content = completion.choices[0].message.content || "";
+        let reasoning = "";
+        let cleanContent = content;
 
-        // 9. Parse Response (now returns single video prompt, not array of text hooks)
-        const hookResult = parseHooksResponse(content);
+        // Extract reasoning (Deepseek R1)
+        const thinkMatch = cleanContent.match(/<think>([\s\S]*?)<\/think>/);
+        if (thinkMatch) {
+            reasoning = thinkMatch[1].trim();
+            cleanContent = cleanContent.replace(/<think>[\s\S]*?<\/think>/g, "");
+        }
+
+        // Clean markdown
+        cleanContent = cleanContent.replace(/```(?:json)?\s*([\s\S]*?)```/g, "$1").trim();
+
+        // 9. Parse Response
+        const hookResult = parseHooksResponse(cleanContent);
 
         // 10. Save to Database (like main generator)
         let savedId = null;
@@ -216,6 +229,7 @@ async function hooksHandler(req: Request) {
             id: savedId,
             hook: hookResult.hook,
             prompt: hookResult.prompt,
+            reasoning: isFastMode ? undefined : reasoning,
             fadeOut: hookResult.fadeOut,
             viralHook: hookResult.viralHook,
             cameraWork: hookResult.cameraWork,

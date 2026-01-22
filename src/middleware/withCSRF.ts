@@ -34,18 +34,17 @@ export function withCSRF(handler: (req: NextRequest) => Promise<NextResponse>) {
             const cookieToken = req.cookies.get(CSRF_COOKIE)?.value;
             const headerToken = req.headers.get(CSRF_TOKEN_HEADER);
 
-            console.log('[CSRF Debug] Cookie:', cookieToken ? `${cookieToken.slice(0, 8)}...` : 'MISSING');
-            console.log('[CSRF Debug] Header:', headerToken ? `${headerToken.slice(0, 8)}...` : 'MISSING');
-            console.log('[CSRF Debug] All Cookies:', req.cookies.getAll().map(c => c.name).join(', '));
+            // Detailed validation logs
+            console.log(`[CSRF] ${method} ${req.nextUrl.pathname} | Cookie: ${cookieToken ? 'OK' : 'MISSING'} | Header: ${headerToken ? 'OK' : 'MISSING'}`);
 
-            if (!verifyToken(cookieToken || '', headerToken || '')) {
-                console.log('[CSRF Debug] VALIDATION FAILED');
+            if (!cookieToken || !headerToken || !verifyToken(cookieToken, headerToken)) {
+                // If it's production and the cookie is missing, we might have a cold start / first visit issue.
+                // However, security first. Let's just ensure we set it on GET.
                 return NextResponse.json(
-                    { error: 'CSRF validation failed. Please refresh the page.' },
+                    { error: 'Security validation failed. Please refresh the page.' },
                     { status: 403 }
                 );
             }
-            console.log('[CSRF Debug] VALIDATION PASSED');
         }
 
         const response = await handler(req);

@@ -5,7 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Copy, Check, Sparkles, Zap, Clapperboard, ChevronDown,
-    FileText, Wand2, RefreshCw, Video, Camera, Sun, Target, Cpu, Layers
+    FileText, Wand2, RefreshCw, Video, Camera, Sun, Target, Cpu, Layers, Brain
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/ui/navbar";
@@ -17,8 +17,13 @@ const supabase = createBrowserClient(
 );
 
 const AI_MODELS = [
-    { id: "xiaomi/mimo-v2-flash:free", name: "Xiaomi MIMO v2", icon: Zap },
-    { id: "tngtech/deepseek-r1t2-chimera:free", name: "TNG Chimera", icon: Target },
+    { id: "deepseek/deepseek-r1-0528:free", name: "Deepseek R1 (Thinking)", icon: Sparkles, desc: "Original R1 with visible logic" },
+    { id: "xiaomi/mimo-v2-flash:free", name: "Xiaomi MIMO v2 (Instant)", icon: Zap, desc: "Fastest generation - No thinking" },
+    { id: "deepseek/deepseek-r1-0528:free-fast", name: "Deepseek R1 (No Thinking)", icon: Zap, desc: "R1 results - Thinking hidden" },
+    { id: "tngtech/deepseek-r1t2-chimera:free", name: "R1T2 Chimera (Thinking)", icon: Brain, desc: "Hybrid reasoning with logs" },
+    { id: "tngtech/deepseek-r1t2-chimera:free-fast", name: "R1T2 Chimera (No Thinking)", icon: Cpu, desc: "Hybrid results - Thinking hidden" },
+    { id: "tngtech/deepseek-r1t-chimera:free", name: "R1T Chimera (Thinking)", icon: Target, desc: "Balanced reasoning with logs" },
+    { id: "tngtech/deepseek-r1t-chimera:free-fast", name: "R1T Chimera (No Thinking)", icon: Zap, desc: "Balanced results - Thinking hidden" },
 ];
 
 const TARGET_MODELS = [
@@ -31,6 +36,7 @@ const TARGET_MODELS = [
 interface HookResult {
     hook: string;
     prompt: string;
+    reasoning?: string;
     fadeOut: string;
     viralHook: string;
     cameraWork: string;
@@ -55,7 +61,7 @@ export default function HooksPage() {
     const [stylePreference, setStylePreference] = useState("");
     const [mode, setMode] = useState<'chaos' | 'cinematic' | 'shocking' | 'anime' | 'cartoon' | 'stickman'>('shocking');
     const [targetModel, setTargetModel] = useState("kling");
-    const [aiModel, setAiModel] = useState(AI_MODELS[0].id);
+    const [aiModel, setAiModel] = useState("deepseek/deepseek-r1-0528:free");
     const [isAiDropdownOpen, setIsAiDropdownOpen] = useState(false);
 
     // Results State
@@ -121,6 +127,7 @@ export default function HooksPage() {
             setResult({
                 hook: data.hook,
                 prompt: data.prompt,
+                reasoning: data.reasoning,
                 fadeOut: data.fadeOut,
                 viralHook: data.viralHook,
                 cameraWork: data.cameraWork,
@@ -390,6 +397,34 @@ export default function HooksPage() {
                                 </div>
                                 <p className="text-xl font-bold text-white">"{result.hook}"</p>
                             </div>
+
+                            {/* AI Thought Process (Expandable) */}
+                            {result?.reasoning && (
+                                <div className="bg-gray-800/20 rounded-2xl border border-white/5 overflow-hidden">
+                                    <button
+                                        onClick={() => {
+                                            const content = document.getElementById('think-box-hooks');
+                                            if (content) content.classList.toggle('hidden');
+                                            const icon = document.getElementById('think-icon-hooks');
+                                            if (icon) icon.classList.toggle('rotate-180');
+                                        }}
+                                        className="w-full px-4 py-3 flex items-center justify-between text-gray-400 hover:text-white transition-all group"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Brain className="w-4 h-4 text-orange-400 group-hover:scale-110 transition-transform" />
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Deepseek R1 Reasoning</span>
+                                        </div>
+                                        <ChevronDown id="think-icon-hooks" className="w-4 h-4 transition-transform duration-300" />
+                                    </button>
+                                    <div id="think-box-hooks" className="hidden border-t border-white/5 bg-black/40">
+                                        <div className="p-4">
+                                            <div className="text-[11px] leading-relaxed text-gray-400 font-mono max-h-[150px] overflow-y-auto custom-scrollbar italic whitespace-pre-wrap">
+                                                {result.reasoning}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Main Video Prompt */}
                             <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
